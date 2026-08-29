@@ -13,3 +13,9 @@ def test_queue_contains_only_review_items(tmp_path):
     store.upsert(Job("test", "1", "A", "SWE Intern", "NYC", "https://example/a").as_dict(), {"eligible": True, "score": 70, "notify_threshold": 45})
     store.upsert(Job("test", "2", "B", "Marketing Intern", "NYC", "https://example/b").as_dict(), {"eligible": True, "score": 10, "notify_threshold": 45})
     assert [x["company"] for x in store.ready_queue()] == ["A"]
+
+def test_screened_jobs_drop_large_payloads(tmp_path):
+    store = StateStore(tmp_path/"state.json")
+    job = Job("test", "1", "A", "Marketing Intern", "NYC", "https://example/a", "large description", metadata={"raw": "large"}).as_dict()
+    record, _ = store.upsert(job, {"eligible": True, "score": 10, "notify_threshold": 45, "reasons": ["unused"]})
+    assert record == {"key": job["key"], "first_seen": record["first_seen"], "status": "screened_out"}
