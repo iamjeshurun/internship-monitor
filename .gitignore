@@ -1,0 +1,10 @@
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*.egg-info/
+.venv/
+.env
+config/application_answers.yaml
+config/private/
+mac/state/
+data/*.tmp
