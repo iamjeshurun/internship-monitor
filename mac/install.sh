@@ -1,0 +1,15 @@
+#!/bin/zsh
+set -euo pipefail
+PROJECT_DIR="${0:A:h:h}"
+VENV="$PROJECT_DIR/.venv"
+python3 -m venv "$VENV"
+"$VENV/bin/pip" install -r "$PROJECT_DIR/requirements.txt"
+mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Application Support/JobMonitor" "$HOME/Library/Logs"
+chmod +x "$PROJECT_DIR/mac/run_agent.sh"
+sed -e "s|__PROJECT__|$PROJECT_DIR|g" -e "s|__HOME__|$HOME|g" "$PROJECT_DIR/mac/com.jobmonitor.poll.plist.template" > "$HOME/Library/LaunchAgents/com.jobmonitor.poll.plist"
+echo "Installed. Save the private repo name and fine-grained read-only token:"
+echo "echo 'owner/private-repository' > '$HOME/Library/Application Support/JobMonitor/github_repo'"
+echo "security add-generic-password -U -a $USER -s job-monitor-github-token -w 'TOKEN'"
+echo "Then run:"
+echo "launchctl bootstrap gui/$(id -u) $HOME/Library/LaunchAgents/com.jobmonitor.poll.plist"
+echo "Dashboard: $VENV/bin/python $PROJECT_DIR/mac/dashboard.py"
