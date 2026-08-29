@@ -16,3 +16,10 @@ def test_priority_changes_score():
 def test_missing_description_is_review_flag():
     r = assess(job(description=""), PROFILE); assert r.eligible and "sponsorship unknown" in r.flags
 def test_senior_role_rejected(): assert not assess(job(title="Senior Software Engineer Intern - Summer 2027"), PROFILE).eligible
+def test_masters_or_phd_only_role_rejected():
+    r = assess(job(description="We are looking for Masters or PhD candidates in computer science."), PROFILE)
+    assert not r.eligible and "advanced degree required" in r.blockers
+
+def test_bachelors_role_not_rejected_as_advanced_degree():
+    r = assess(job(description="Python internship for candidates pursuing a bachelor's degree."), PROFILE)
+    assert r.eligible
