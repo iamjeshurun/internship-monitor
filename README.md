@@ -93,6 +93,13 @@ OUTLOOK_ACCESS_TOKEN=... python src/email_history.py --provider outlook
 GMAIL_ACCESS_TOKEN=... python src/email_history.py --provider gmail
 ```
 
+On a Mac with the accounts enabled in Apple Mail, no developer OAuth app is
+required. After granting Automation access, scan each account locally:
+
+```bash
+python src/email_history.py --provider apple-mail --account your-address@example.com
+```
+
 The importer records inferred company, stage, date, requisition ID, and confidence. It intentionally does not store full message bodies. OAuth application registration and refresh-token custody must be completed for a permanent connection; do not place tokens in GitHub.
 
 ## X internship and recruiter leads
