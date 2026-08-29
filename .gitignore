@@ -8,3 +8,4 @@ config/application_answers.yaml
 config/private/
 mac/state/
 data/*.tmp
+data/application_history.json
