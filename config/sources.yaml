@@ -15,7 +15,32 @@ sources:
 
 # Add verified boards here. Do not guess tokens in production.
 boards:
-  greenhouse: {}
+  greenhouse:
+    Akuna Capital: akunacapital
+    Betterment: betterment
+    Block (Square): block
+    Braze: braze
+    Cameo: cameo
+    Cloudflare: cloudflare
+    Datadog: datadog
+    Doximity: doximity
+    Dropbox: dropbox
+    Duolingo: duolingo
+    Elastic: elastic
+    Enova: enova
+    Epic Games: epicgames
+    Figma: figma
+    Flatiron Health: flatironhealth
+    Jane Street: janestreet
+    Jump Trading: jumptrading
+    MongoDB: mongodb
+    Okta: okta
+    Peloton: peloton
+    Point72 (Cubist): point72
+    Relativity: relativity
+    Squarespace: squarespace
+    Stripe: stripe
+    Twilio: twilio
   lever: {}
   ashby: {}
   custom_pages: {}
