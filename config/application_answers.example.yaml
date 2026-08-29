@@ -1,0 +1,33 @@
+# Copy this file to ~/.config/job-monitor/application_answers.yaml.
+# Never commit the completed version. Ambiguous questions are always left for review.
+identity:
+  first_name: ""
+  last_name: ""
+  email: ""
+  phone: ""
+  city: ""
+  state: ""
+  country: "United States"
+education:
+  school: "Example University"
+  degree: "Bachelor of Science"
+  major: "Computer Science"
+  graduation_month: 5
+  graduation_year: 2028
+work_authorization:
+  currently_authorized: true
+  requires_future_sponsorship: true
+  visa_status: "student-visa"
+safe_defaults:
+  veteran: "No"
+  security_clearance: "No"
+  classified_government_work: "No"
+  restrictive_covenant: "No"
+  trade_secret_restriction: "No"
+review_required:
+  - salary expectations
+  - willingness to relocate
+  - start date conflicts
+  - legal attestations
+  - demographic disclosures
+  - any question whose wording differs from the saved answer
