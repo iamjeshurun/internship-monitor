@@ -1,0 +1,57 @@
+candidate:
+  name: Alex Candidate
+  school: Example University
+  grad_date: 2028-05
+  visa_status: student-visa
+  sponsorship_needed: true
+skills:
+  languages:
+    terms: [python, java, "c#", "c++", javascript, sql, r, html, css, vba]
+  frameworks:
+    terms: [django, flask, tensorflow, fastapi, react, "node.js", bootstrap, pandas, git, heroku, figma, bert, "watson nlp"]
+  domains:
+    terms: [health tech, healthcare, health data, fintech, quant, quantitative, trading, data science, machine learning, "ai/ml", artificial intelligence, analytics, risk, portfolio, nlp, backend, api, database]
+role_titles:
+  must_match_any: [intern, internship, co-op, coop, fellowship]
+  strong_titles:
+    terms: [software engineer, software engineering, swe, backend, full stack, full-stack, data engineer, data science, data scientist, machine learning, "ai/ml", artificial intelligence, quant, quantitative, research intern, developer, health technology]
+  reject_titles:
+    terms: [senior, staff, principal, director, manager, phd, "5+ years", lead]
+terms:
+  accept: [summer 2027, spring 2027, 2027 internship]
+  reject: [summer 2028, spring 2028, summer 2026, spring 2026]
+graduation:
+  reject_phrases: [graduating in 2027, graduation date of 2027, graduating in 2028, graduation date of 2028, final year student]
+locations:
+  preference_groups:
+    - name: California
+      weight: 16
+      terms: [california, san francisco, mountain view, menlo park, cupertino, san jose, santa clara, palo alto, los angeles, san diego, " ca"]
+    - name: Seattle / Redmond
+      weight: 15
+      terms: [seattle, redmond, bellevue, washington]
+    - name: Chicago
+      weight: 14
+      terms: [chicago, illinois]
+    - name: New York
+      weight: 14
+      terms: [new york, nyc]
+    - name: Texas
+      weight: 13
+      terms: [dallas, houston, austin, plano, irving, texas, " tx"]
+    - name: Remote US
+      weight: 8
+      terms: [remote, united states remote, remote - us]
+  us_markers: [united states, usa, remote us, new york, nyc, chicago, california, seattle, redmond, texas, dallas, houston, austin, " ca", " ny", " il", " tx", " wa"]
+  foreign_markers: [dubai, united arab emirates, canada, toronto, vancouver, london, united kingdom, india, singapore, australia, germany, france, ireland]
+sponsorship:
+  red_flags: [no sponsorship, not able to sponsor, cannot sponsor, unable to sponsor, does not sponsor, no visa sponsorship, permanent work authorization required, must not require sponsorship, citizen or permanent resident, immigration support is not available]
+scoring:
+  min_score_to_notify: 45
+  strong_match_threshold: 70
+  company_priority_weights:
+    Apply first (sophomore program): 15
+    Target: 10
+    Standard: 5
+    Reach: 2
+    High (regional priority): 3
