@@ -1,5 +1,5 @@
 from __future__ import annotations
-import argparse, email, json, os, re
+import argparse, email, json, os, re, subprocess
 from email.policy import default
 from pathlib import Path
 import requests
@@ -55,11 +55,61 @@ def gmail_api(token: str) -> list[dict]:
         if item: results.append(item)
     return results
 
+def apple_mail(account_address: str, years: int = 5) -> list[dict]:
+    """Read matching message metadata through Mail's approved Automation access.
+
+    Message bodies and credentials never leave Mail. AppleScript returns only the
+    subject, sender, and received date for messages matching application keywords.
+    """
+    safe_address = account_address.replace('\\', '\\\\').replace('"', '\\"')
+    script = f'''
+tell application "Mail"
+  set cutoffDate to (current date) - ({years} * 365 * days)
+  set keywords to {{"application", "applied", "assessment", "coding challenge", "interview", "offer", "not moving forward", "unfortunately"}}
+  set usefulMailboxes to {{"INBOX", "Inbox"}}
+  set recordSep to ASCII character 30
+  set fieldSep to ASCII character 31
+  set outputText to ""
+  repeat with acct in every account
+    if (email addresses of acct) contains "{safe_address}" then
+      repeat with box in every mailbox of acct
+        if usefulMailboxes contains (name of box) then
+          repeat with keywordText in keywords
+            try
+              set matchingMessages to (every message of box whose date received > cutoffDate and subject contains keywordText)
+              repeat with msg in matchingMessages
+                set outputText to outputText & (message id of msg) & fieldSep & (subject of msg) & fieldSep & (sender of msg) & fieldSep & ((date received of msg) as string) & recordSep
+              end repeat
+            end try
+          end repeat
+        end if
+      end repeat
+    end if
+  end repeat
+  return outputText
+end tell
+'''
+    proc = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, check=True)
+    found, seen = [], set()
+    for row in proc.stdout.split(chr(30)):
+        fields = row.strip().split(chr(31))
+        if len(fields) != 4 or fields[0] in seen:
+            continue
+        seen.add(fields[0])
+        item = classify(fields[1], "", fields[2], fields[3])
+        if item:
+            item["mailbox_account"] = account_address
+            found.append(item)
+    return found
+
 def main():
-    p = argparse.ArgumentParser(); p.add_argument("--eml-dir", type=Path); p.add_argument("--provider", choices=["outlook", "gmail"]); p.add_argument("--output", type=Path, default=Path("data/application_history.json")); args = p.parse_args()
+    p = argparse.ArgumentParser(); p.add_argument("--eml-dir", type=Path); p.add_argument("--provider", choices=["outlook", "gmail", "apple-mail"]); p.add_argument("--account"); p.add_argument("--years", type=int, default=5); p.add_argument("--output", type=Path, default=Path("data/application_history.json")); args = p.parse_args()
     if args.eml_dir: results = eml_directory(args.eml_dir)
     elif args.provider == "outlook": results = outlook_graph(os.environ["OUTLOOK_ACCESS_TOKEN"])
     elif args.provider == "gmail": results = gmail_api(os.environ["GMAIL_ACCESS_TOKEN"])
+    elif args.provider == "apple-mail":
+        if not args.account: p.error("--account is required with --provider apple-mail")
+        results = apple_mail(args.account, args.years)
     else: p.error("provide --eml-dir or --provider")
     args.output.parent.mkdir(parents=True, exist_ok=True); args.output.write_text(json.dumps({"applications": results}, indent=2)); print(f"Found {len(results)} likely application events")
 
