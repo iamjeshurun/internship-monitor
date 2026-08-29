@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
 <key>Label</key><string>com.jobmonitor.poll</string>
-<key>ProgramArguments</key><array><string>__PROJECT__/mac/run_agent.sh</string></array>
+<key>ProgramArguments</key><array><string>__RUNTIME__/mac/run_agent.sh</string></array>
 <key>StartInterval</key><integer>180</integer><key>RunAtLoad</key><true/>
 <key>StandardOutPath</key><string>__HOME__/Library/Logs/job-monitor.log</string>
 <key>StandardErrorPath</key><string>__HOME__/Library/Logs/job-monitor-error.log</string>
