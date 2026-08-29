@@ -1,0 +1,21 @@
+poll_minutes: 30
+freshness_days: 45
+sources:
+  simplify:
+    enabled: true
+    repo: SimplifyJobs/Summer2027-Internships
+    branch: dev
+    categories: [Software Engineering, Data Science, Quantitative Finance]
+  x:
+    enabled: false
+    query: '("summer 2027 internship" OR "software engineer intern" OR "data science intern" OR "machine learning intern" OR "quant intern") lang:en -is:retweet'
+    watched_accounts: [zero2sudo]
+  custom_jsonld:
+    enabled: true
+
+# Add verified boards here. Do not guess tokens in production.
+boards:
+  greenhouse: {}
+  lever: {}
+  ashby: {}
+  custom_pages: {}
