@@ -119,7 +119,7 @@ The generated packet separates safe saved answers from questions requiring revie
 
 ### Optional live-browser autofill
 
-`browser-extension/` is the shared WebExtension source. Chromium browsers can load it unpacked. Safari users should follow `safari/README.md`; Apple requires Xcode to convert and sign a Safari Web Extension. Save only basic identity fields in its popup, then click **Fill this page** while reviewing an application. Teal fields were filled automatically; orange fields require review. It has no submit capability and stores its small identity profile only in the browser profile. Do not place passwords, government identifiers, or demographic answers in it.
+`browser-extension/` is the Chromium helper. Safari users can use `safari/job-monitor-autofill.user.js` through the lightweight Userscripts app; Xcode is not required. Save only basic identity fields, then click **Review Autofill** while reviewing an application. Teal fields were filled automatically; orange fields require review. It has no submit capability and stores its small identity profile only in the userscript manager. Do not place passwords, government identifiers, or demographic answers in it.
 
 ## Files retained from Claude
 
