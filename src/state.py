@@ -33,6 +33,15 @@ class StateStore:
                 current["status"] = "ready_for_review"
         elif current["status"] in {"discovered", "screened_out", "ready_for_review"}:
             current["status"] = "screened_out"
+        if current["status"] == "screened_out":
+            # Git is the durable dedup/index layer, not a description warehouse.
+            # Current boards are refetched each run; retain full content only for
+            # jobs that a person may review.
+            current = {
+                "key": job["key"],
+                "first_seen": current["first_seen"],
+                "status": "screened_out",
+            }
         self.data["jobs"][job["key"]] = current
         return current, is_new
 
