@@ -1,22 +1,39 @@
 from __future__ import annotations
-import json
-from pathlib import Path
 import os
+from datetime import datetime
+from pathlib import Path
 from flask import Flask, redirect, render_template_string, request
+from tracker import load_json, merge_tracker, save_status, STAGE_ORDER
 
 DATA = Path(os.environ.get("JOB_MONITOR_LOCAL_DIR", Path.home()/"Library/Application Support/JobMonitor"))
 DATA.mkdir(parents=True, exist_ok=True)
-QUEUE, STATUS = DATA/"review_queue.json", DATA/"status.json"
+QUEUE, STATUS, HISTORY = DATA/"review_queue.json", DATA/"status.json", DATA/"application_history.json"
 app = Flask(__name__)
-HTML = '''<!doctype html><title>Job Monitor</title><style>body{font:15px system-ui;max-width:1050px;margin:35px auto;color:#14202b}article{border:1px solid #ccd7df;border-radius:12px;padding:18px;margin:14px 0}small{color:#627482}.score{font-size:24px;font-weight:700}button,a{margin-right:9px}h1{margin-bottom:4px}</style><h1>Applications ready for review</h1><small>{{jobs|length}} current matches</small>{% for j in jobs %}<article><div class=score>{{j.assessment.score}}/100</div><h2>{{j.company}} — {{j.title}}</h2><p>{{j.location}}</p><p>{{j.assessment.reasons|join(' · ')}}</p><p><b>Verify:</b> {{j.assessment.flags|join(' · ')}}</p><a href="{{j.url}}" target=_blank>Open application</a><form style="display:inline" method=post action="/status/{{j.key}}"><button name=status value=reviewing>Reviewing</button><button name=status value=dismissed>Dismiss</button><button name=status value=applied>Applied</button></form></article>{% endfor %}'''
+HTML = '''<!doctype html><meta name="viewport" content="width=device-width"><title>Job Monitor Tracker</title><style>
+:root{color-scheme:light}body{font:15px system-ui;margin:0;background:#f4f7f9;color:#14202b}.wrap{max-width:1180px;margin:32px auto;padding:0 18px}header{display:flex;justify-content:space-between;align-items:end;gap:16px}.counts{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0}.pill{background:white;border:1px solid #ccd7df;border-radius:999px;padding:8px 12px}.toolbar{display:flex;gap:10px;margin-bottom:16px}.toolbar input,.toolbar select{padding:10px;border:1px solid #b8c6d0;border-radius:8px;background:white}article{background:white;border:1px solid #ccd7df;border-radius:12px;padding:18px;margin:12px 0;box-shadow:0 2px 8px #17324d0a}.top{display:flex;justify-content:space-between;gap:16px}.score{font-size:22px;font-weight:750}.status{text-transform:capitalize;border-radius:999px;background:#e6f0f7;padding:5px 9px;white-space:nowrap}small,.muted{color:#627482}button,.link{display:inline-block;margin:5px 6px 0 0;padding:8px 10px;border:0;border-radius:7px;background:#e7edf2;color:#14202b;text-decoration:none;cursor:pointer}.primary{background:#124e78;color:white}details{margin-top:9px}@media(max-width:650px){header,.top{align-items:start;flex-direction:column}.toolbar{flex-direction:column}}
+</style><div class=wrap><header><div><h1>Internship Application Tracker</h1><div class=muted>Cloud queue + Apple Mail status updates · {{total}} tracked</div></div><div class=muted>Updated {{updated}}</div></header>
+<div class=counts>{% for name,count in counts.items() %}<span class=pill>{{name|capitalize}}: <b>{{count}}</b></span>{% endfor %}</div>
+<form class=toolbar method=get><input name=q value="{{query}}" placeholder="Search company or role"><select name=stage><option value="">All stages</option>{% for s in stages %}<option value="{{s}}" {{'selected' if stage==s else ''}}>{{s|capitalize}}</option>{% endfor %}</select><button class=primary>Filter</button></form>
+{% for j in items %}<article><div class=top><div><div class=score>{{j.assessment.score}}{% if j.assessment.score != '—' %}/100{% endif %}</div><h2>{{j.company}} — {{j.title}}</h2><div class=muted>{{j.location}}</div></div><span class=status>{{j.status}} · {{j.status_source}}</span></div>
+{% if j.assessment.reasons %}<p>{{j.assessment.reasons|join(' · ')}}</p>{% endif %}{% if j.assessment.flags %}<p><b>Verify:</b> {{j.assessment.flags|join(' · ')}}</p>{% endif %}
+{% if j.url %}<a class="link primary" href="{{j.url}}" target=_blank>Open application</a>{% endif %}<form style="display:inline" method=post action="/status/{{j.key}}">{% for s in stages %}<button name=status value="{{s}}">{{s|capitalize}}</button>{% endfor %}</form>
+{% if j.events %}<details><summary>{{j.events|length}} mailbox update(s)</summary>{% for e in j.events %}<p><b>{{e.stage|capitalize}}</b> · {{e.date}}<br>{{e.subject}}<br><small>{{e.mailbox_account}}</small></p>{% endfor %}</details>{% endif %}</article>{% else %}<article>No applications match this filter.</article>{% endfor %}</div>'''
 
-def statuses(): return json.loads(STATUS.read_text()) if STATUS.exists() else {}
+def tracker_items(): return merge_tracker(load_json(QUEUE, {"jobs": []}), load_json(HISTORY, {"applications": []}), load_json(STATUS, {}))
+
 @app.get("/")
 def index():
-    jobs = json.loads(QUEUE.read_text()).get("jobs", []) if QUEUE.exists() else []
-    state = statuses(); jobs = [dict(j, local_status=state.get(j["key"], "new")) for j in jobs if state.get(j["key"]) != "dismissed"]
-    return render_template_string(HTML, jobs=jobs)
+    all_items, query, stage = tracker_items(), request.args.get("q", "").strip().lower(), request.args.get("stage", "")
+    counts = {name: sum(item.get("status") == name for item in all_items) for name in STAGE_ORDER}
+    items = [item for item in all_items if not query or query in f"{item.get('company','')} {item.get('title','')}".lower()]
+    if stage: items = [item for item in items if item.get("status") == stage]
+    updated = datetime.fromtimestamp(QUEUE.stat().st_mtime).strftime("%b %d, %I:%M %p") if QUEUE.exists() else "waiting for first sync"
+    return render_template_string(HTML, items=items, total=len(all_items), counts=counts, stages=list(STAGE_ORDER), query=query, stage=stage, updated=updated)
+
 @app.post("/status/<key>")
-def update(key):
-    state = statuses(); state[key] = request.form["status"]; STATUS.write_text(json.dumps(state, indent=2)); return redirect("/")
+def update(key): save_status(STATUS, key, request.form["status"]); return redirect(request.referrer or "/")
+
+@app.get("/health")
+def health(): return {"ok": True, "items": len(tracker_items())}
+
 if __name__ == "__main__": app.run(host="127.0.0.1", port=8765)

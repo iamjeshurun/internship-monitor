@@ -6,12 +6,16 @@ import requests
 
 PATTERNS = [
     re.compile(r"thank you for apply(?:ing|ied)", re.I),
+    re.compile(r"thank(?:s| you) for your interest", re.I),
     re.compile(r"application (?:has been )?received", re.I),
+    re.compile(r"application (?:was |has been )?submitted", re.I),
     re.compile(r"we received your application", re.I),
+    re.compile(r"we have received", re.I),
+    re.compile(r"your application to", re.I),
     re.compile(r"candidate application", re.I),
     re.compile(r"application confirmation", re.I),
 ]
-STAGES = [("assessment", re.compile(r"assessment|coding challenge|hackerrank|codesignal", re.I)), ("interview", re.compile(r"interview|schedule a call", re.I)), ("rejected", re.compile(r"unfortunately|not moving forward|other candidates", re.I))]
+STAGES = [("offer", re.compile(r"offer of employment|pleased to offer|employment offer", re.I)), ("assessment", re.compile(r"assessment|coding challenge|hackerrank|codesignal", re.I)), ("interview", re.compile(r"interview|schedule a call", re.I)), ("rejected", re.compile(r"unfortunately|not moving forward|other candidates", re.I))]
 
 def classify(subject: str, body: str, sender: str, date: str) -> dict | None:
     text = f"{subject}\n{body}"
@@ -55,17 +59,18 @@ def gmail_api(token: str) -> list[dict]:
         if item: results.append(item)
     return results
 
-def apple_mail(account_address: str, years: int = 5) -> list[dict]:
+def apple_mail(account_address: str, years: int = 5, days: int | None = None) -> list[dict]:
     """Read matching message metadata through Mail's approved Automation access.
 
     Message bodies and credentials never leave Mail. AppleScript returns only the
     subject, sender, and received date for messages matching application keywords.
     """
     safe_address = account_address.replace('\\', '\\\\').replace('"', '\\"')
+    lookback_days = days if days is not None else years * 365
     script = f'''
 tell application "Mail"
-  set cutoffDate to (current date) - ({years} * 365 * days)
-  set keywords to {{"application", "applied", "assessment", "coding challenge", "interview", "offer", "not moving forward", "unfortunately"}}
+  set cutoffDate to (current date) - ({lookback_days} * days)
+  set keywords to {{"application", "applied", "interest", "received", "assessment", "coding challenge", "interview", "offer", "not moving forward", "unfortunately"}}
   set usefulMailboxes to {{"INBOX", "Inbox"}}
   set recordSep to ASCII character 30
   set fieldSep to ASCII character 31
@@ -106,7 +111,7 @@ end tell
     return found
 
 def main():
-    p = argparse.ArgumentParser(); p.add_argument("--eml-dir", type=Path); p.add_argument("--provider", choices=["outlook", "gmail", "apple-mail"]); p.add_argument("--account"); p.add_argument("--years", type=int, default=5); p.add_argument("--merge-input", type=Path, nargs="+"); p.add_argument("--output", type=Path, default=Path("data/application_history.json")); args = p.parse_args()
+    p = argparse.ArgumentParser(); p.add_argument("--eml-dir", type=Path); p.add_argument("--provider", choices=["outlook", "gmail", "apple-mail"]); p.add_argument("--account"); p.add_argument("--years", type=int, default=5); p.add_argument("--days", type=int); p.add_argument("--merge-input", type=Path, nargs="+"); p.add_argument("--output", type=Path, default=Path("data/application_history.json")); args = p.parse_args()
     if args.merge_input:
         combined = [item for path in args.merge_input for item in json.loads(path.read_text()).get("applications", [])]
         results, seen = [], set()
@@ -119,7 +124,7 @@ def main():
     elif args.provider == "gmail": results = gmail_api(os.environ["GMAIL_ACCESS_TOKEN"])
     elif args.provider == "apple-mail":
         if not args.account: p.error("--account is required with --provider apple-mail")
-        results = apple_mail(args.account, args.years)
+        results = apple_mail(args.account, args.years, args.days)
     else: p.error("provide --eml-dir or --provider")
     args.output.parent.mkdir(parents=True, exist_ok=True); args.output.write_text(json.dumps({"applications": results}, indent=2)); print(f"Found {len(results)} likely application events")
 

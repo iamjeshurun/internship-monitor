@@ -14,11 +14,11 @@ Cloud discovery on GitHub Actions, native review notifications on macOS, and hum
 
 1. GitHub Actions polls official Greenhouse, Lever, Ashby, JSON-LD company pages, Simplify, and optional X search.
 2. Jobs are normalized and stored in `data/state.json`; changing the profile can rescore old jobs.
-3. Strong eligible matches are published to `data/review_queue.json` and emailed.
-4. The Mac agent reads the private queue every three minutes and creates native notifications.
-5. The local dashboard at `http://127.0.0.1:8765` supports review, dismiss, and applied states.
+3. Strong eligible matches are published to `data/review_queue.json` and appended to the private `Job Monitor Alerts` GitHub issue.
+4. The Mac agent reads the private queue every three minutes and creates native notifications; optional `terminal-notifier` support makes them clickable.
+5. The always-on local dashboard at `http://127.0.0.1:8765` replaces the spreadsheet tracker and supports ready, reviewing, applied, assessment, interview, offer, rejected, and dismissed states.
 6. `prep_application.py` creates a safe review packet; it never submits.
-7. `email_history.py` imports prior application evidence from Outlook, Gmail, or exported `.eml` files.
+7. A 15-minute local Apple Mail sync updates tracker stages from Gmail and Outlook/Exchange metadata without retaining message bodies.
 
 ## Quick local test
 
@@ -32,7 +32,7 @@ JOB_MONITOR_QUEUE_FILE="$PWD/data/review_queue.json" python mac/mac_agent.py
 python mac/dashboard.py
 ```
 
-With no SMTP credentials, email is skipped visibly while the review queue remains durable.
+GitHub issue alerts are the primary cloud notification path. SMTP remains an optional fallback.
 
 ## Configure official company boards
 
@@ -55,14 +55,14 @@ The Simplify source remains enabled for broad discovery. It has no job descripti
 ## GitHub deployment
 
 1. Create a **private** repository and push this directory.
-2. Add Actions secrets:
+2. Optional fallback-email and X integrations use Actions secrets:
    - `SMTP_USER`
    - `SMTP_PASSWORD` (an app password, never the real password)
    - `NOTIFY_EMAIL`
    - `X_BEARER_TOKEN` only if X monitoring is enabled
 3. Run **Tests**, then manually run **Job Monitor**.
 4. Confirm `data/state.json` and `data/review_queue.json` update.
-5. Confirm an `ACTION READY` email reaches the phone mail app.
+5. Subscribe to the private `Job Monitor Alerts` issue. In GitHub notification settings, enable **Email** and **On GitHub** for **Participating and @mentions** and select a verified destination email.
 
 The monitor runs at minutes 7 and 37 each hour, uses a concurrency lock, and commits only durable state files. Tests run on code changes, not every polling cycle.
 
@@ -76,7 +76,7 @@ export JOB_MONITOR_GITHUB_TOKEN="fine-grained-read-only-token"
 python mac/mac_agent.py
 ```
 
-Store the token in macOS Keychain or another credential manager before enabling the LaunchAgent. The Mac catches up after sleep; GitHub continues searching while it is offline.
+Store the token in macOS Keychain or another credential manager before enabling the LaunchAgents. The installer creates the queue poller, always-on dashboard, and 15-minute mailbox sync. The Mac catches up after sleep; GitHub continues searching while it is offline.
 
 ## Outlook, Gmail, and existing applications
 
@@ -100,7 +100,7 @@ required. After granting Automation access, scan each account locally:
 python src/email_history.py --provider apple-mail --account your-address@example.com
 ```
 
-The importer records inferred company, stage, date, requisition ID, and confidence. It intentionally does not store full message bodies. OAuth application registration and refresh-token custody must be completed for a permanent connection; do not place tokens in GitHub.
+The importer records inferred company, stage, date, requisition ID, and confidence. It intentionally does not store full message bodies. The installed Mac mailbox service performs this scan every 15 minutes across the configured Gmail and Outlook/Exchange accounts. OAuth application registration and refresh-token custody must be completed for a non-Apple-Mail connection; do not place tokens in GitHub.
 
 ## X internship and recruiter leads
 

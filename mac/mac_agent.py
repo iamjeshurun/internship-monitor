@@ -1,7 +1,8 @@
 from __future__ import annotations
-import json, os, subprocess, time
+import json, os
 from pathlib import Path
 import requests
+from notifier import notify as native_notify
 
 ROOT = Path(__file__).resolve().parent.parent
 LOCAL = Path(os.environ.get("JOB_MONITOR_LOCAL_DIR", Path.home()/"Library/Application Support/JobMonitor"))
@@ -19,7 +20,7 @@ def notify(job):
     title = f"{job['company']} — {job['title']}".replace('"', "'")
     message = f"{job['assessment']['score']}/100 · {job.get('location','')} · ready for review".replace('"', "'")
     if os.environ.get("JOB_MONITOR_DRY_RUN") == "1": print("NOTIFY", title, message); return
-    subprocess.run(["osascript", "-e", f'display notification "{message}" with title "Job Monitor" subtitle "{title}" sound name "Glass"'], check=False)
+    native_notify("Job Monitor", message, title, job.get("url") or "http://127.0.0.1:8765")
 
 def once():
     queue = fetch_queue(); CACHE.write_text(json.dumps(queue, indent=2))
