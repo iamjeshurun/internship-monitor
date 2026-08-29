@@ -1,14 +1,17 @@
-# Safari review helper
+# Lightweight Safari review helper
 
-Safari Web Extensions must be wrapped in a signed macOS app by Xcode. The reusable
-extension source is in `../browser-extension`; it fills reviewed fields but never
-clicks a submit button.
+No Xcode is required. `job-monitor-autofill.user.js` runs through the open-source
+Userscripts Safari manager. It appears only on pages that resemble job application
+forms, fills four basic identity fields after a click, highlights sensitive fields,
+and has no submit capability.
 
-1. Install the full current Xcode from the Mac App Store and open it once.
-2. Run `zsh safari/convert.sh` from the project root.
-3. In Xcode, select your personal development team and run the generated macOS app.
-4. In Safari, enable the extension under **Safari > Settings > Extensions**.
+1. Install [Userscripts from the Mac App Store](https://apps.apple.com/us/app/userscripts/id1463298887?platform=mac).
+2. Open Userscripts once, then enable it in **Safari > Settings > Extensions**.
+3. Grant website access. For tighter privacy, allow only the application sites you
+   use; **All Websites** is more convenient for varied company career domains.
+4. In Userscripts, choose **New JavaScript**, paste the contents of
+   `job-monitor-autofill.user.js`, and save it.
+5. Open an application page and click **Review Autofill** at the bottom-right.
 
-The converter is not included with Command Line Tools alone. No X developer API
-account is needed for this local Safari helper; Xcode may ask for a free Apple ID
-development team for local signing.
+The identity profile is stored by Userscripts, not by each employer site. Never add
+passwords, government identifiers, demographic answers, or sponsorship answers.
