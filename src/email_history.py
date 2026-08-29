@@ -89,7 +89,10 @@ tell application "Mail"
   return outputText
 end tell
 '''
-    proc = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, check=True)
+    try:
+        proc = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, check=True, timeout=90)
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("Apple Mail scan exceeded 90 seconds and was stopped safely") from exc
     found, seen = [], set()
     for row in proc.stdout.split(chr(30)):
         fields = row.strip().split(chr(31))
@@ -103,8 +106,15 @@ end tell
     return found
 
 def main():
-    p = argparse.ArgumentParser(); p.add_argument("--eml-dir", type=Path); p.add_argument("--provider", choices=["outlook", "gmail", "apple-mail"]); p.add_argument("--account"); p.add_argument("--years", type=int, default=5); p.add_argument("--output", type=Path, default=Path("data/application_history.json")); args = p.parse_args()
-    if args.eml_dir: results = eml_directory(args.eml_dir)
+    p = argparse.ArgumentParser(); p.add_argument("--eml-dir", type=Path); p.add_argument("--provider", choices=["outlook", "gmail", "apple-mail"]); p.add_argument("--account"); p.add_argument("--years", type=int, default=5); p.add_argument("--merge-input", type=Path, nargs="+"); p.add_argument("--output", type=Path, default=Path("data/application_history.json")); args = p.parse_args()
+    if args.merge_input:
+        combined = [item for path in args.merge_input for item in json.loads(path.read_text()).get("applications", [])]
+        results, seen = [], set()
+        for item in combined:
+            key = (item.get("subject"), item.get("date"), item.get("mailbox_account"))
+            if key not in seen:
+                seen.add(key); results.append(item)
+    elif args.eml_dir: results = eml_directory(args.eml_dir)
     elif args.provider == "outlook": results = outlook_graph(os.environ["OUTLOOK_ACCESS_TOKEN"])
     elif args.provider == "gmail": results = gmail_api(os.environ["GMAIL_ACCESS_TOKEN"])
     elif args.provider == "apple-mail":
