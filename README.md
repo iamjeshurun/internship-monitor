@@ -68,7 +68,7 @@ The monitor runs at minutes 7 and 37 each hour, uses a concurrency lock, and com
 
 ## MacBook notification setup
 
-Run `zsh mac/install.sh`. For initial testing, use `JOB_MONITOR_QUEUE_FILE` with the local queue. The installer prints commands to save the private repository name under `~/Library/Application Support/JobMonitor/` and the fine-grained read-only token in macOS Keychain. For a one-time foreground test, you may instead set:
+Run `zsh mac/install.sh`. It installs the small background runtime under `~/Library/Application Support/JobMonitor/runtime`, avoiding macOS background-access restrictions on Documents. For initial testing, use `JOB_MONITOR_QUEUE_FILE` with the local queue. The installer prints commands to save the private repository name under `~/Library/Application Support/JobMonitor/` and the fine-grained read-only token in macOS Keychain. For a one-time foreground test, you may instead set:
 
 ```bash
 export JOB_MONITOR_GITHUB_REPO="owner/private-repository"
