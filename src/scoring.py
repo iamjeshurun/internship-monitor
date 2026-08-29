@@ -26,6 +26,11 @@ def assess(job: dict, profile: dict, company_meta: dict | None = None) -> Assess
     threshold = profile["scoring"]["min_score_to_notify"]
     if hits(title, profile["role_titles"]["reject_titles"]["terms"]): blockers.append("senior/advanced role title")
     if not hits(title, profile["role_titles"]["must_match_any"]): blockers.append("not identified as an internship or co-op")
+    advanced_degree = (
+        re.search(r"\b(?:pursuing|enrolled\s+in|working\s+toward)\b[^.\n]{0,60}\b(?:master'?s|masters|ph\.?\s*d\.?|doctorate)\b", description, re.I)
+        or re.search(r"\b(?:master'?s|masters|ph\.?\s*d\.?|doctorate)\b[^.\n]{0,80}\b(?:required|candidate|candidates|student|students|program|degree)\b", description, re.I)
+    )
+    if advanced_degree: blockers.append("advanced degree required")
     foreign = hits(location, profile["locations"].get("foreign_markers", []))
     us = hits(location, profile["locations"].get("us_markers", []))
     if foreign and not us: blockers.append(f"non-US location: {foreign[0]}")
