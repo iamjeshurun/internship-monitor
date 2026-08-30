@@ -5,6 +5,7 @@ Cloud discovery on GitHub Actions, native review notifications on macOS, and hum
 ## Safety and operating boundary
 
 - Discovery, scoring, queuing, reporting, and notifications can run unattended.
+- A focused priority-program watcher runs every ten minutes for programs such as Google STEP, Microsoft Explore, Meta University, UberSTAR, and NVIDIA Ignite. Alias matches are deduplicated across sources, official links are preferred, and unverified aggregator links are labeled for review.
 - Application prep can assemble saved answers and open the employer form.
 - Login, CAPTCHAs, ambiguous legal/sponsorship questions, and final submission require live review.
 - The system never follows, messages, or DMs recruiters automatically.

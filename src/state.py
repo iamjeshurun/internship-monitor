@@ -51,7 +51,7 @@ class StateStore:
 
     def ready_queue(self) -> list[dict]:
         jobs = [j for j in self.data["jobs"].values() if j.get("status") == "ready_for_review"]
-        return sorted(jobs, key=lambda j: (-j["assessment"]["score"], j.get("first_seen", "")))
+        return sorted(jobs, key=lambda j: (-bool(j.get("priority_program")), -bool((j.get("priority_program") or {}).get("official_source")), -j["assessment"]["score"], j.get("first_seen", "")))
 
     def save(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)

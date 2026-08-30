@@ -38,9 +38,13 @@ def send_digest(jobs: list[dict], errors: list[str]) -> bool:
     lines = [f"{len(jobs)} applications are ready for review", ""]
     for job in jobs:
         a = job["assessment"]
-        lines += [f"[{a['score']}/100] {job['company']} — {job['title']}", job.get("location", ""), job["url"], "Why: " + "; ".join(a["reasons"][:4]), "Review: " + "; ".join(a["flags"]), ""]
+        priority = job.get("priority_program") or {}
+        label = f"PRIORITY PROGRAM: {priority['name']} ({'official source verified' if priority.get('official_source') else 'verify on official board'})" if priority else ""
+        lines += [label, f"[{a['score']}/100] {job['company']} — {job['title']}", job.get("location", ""), job["url"], "Why: " + "; ".join(a["reasons"][:4]), "Review: " + "; ".join(a["flags"]), ""]
     if errors: lines += ["Source warnings:", *errors]
-    subject, body = f"ACTION READY: {len(jobs)} internship match(es)", "\n".join(lines)
+    priority_count = sum(bool(job.get("priority_program")) for job in jobs)
+    prefix = "PRIORITY PROGRAM" if priority_count else "ACTION READY"
+    subject, body = f"{prefix}: {len(jobs)} internship match(es)", "\n".join(lines)
     try:
         if send_github_alert(subject, body): return True
     except Exception as exc: print(f"GitHub alert delivery failed: {exc}")

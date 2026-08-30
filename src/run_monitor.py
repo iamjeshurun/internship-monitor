@@ -5,11 +5,21 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 from notifications import send_digest
+from priority import classify_priority, deduplicate
 from scoring import assess
 from sources import ashby, custom_jsonld, greenhouse, lever, simplify, x_recent
 from state import StateStore
 
 def load_yaml(name): return yaml.safe_load((ROOT / "config" / name).read_text())
+
+def prepare_jobs(jobs, programs):
+    prepared = []
+    for job in jobs:
+        value = job.as_dict()
+        priority = classify_priority(value, programs)
+        if priority: value["priority_program"] = priority
+        prepared.append(value)
+    return deduplicate(prepared)
 
 def collect(cfg):
     jobs, errors = [], []
@@ -33,13 +43,15 @@ def collect(cfg):
 
 def main():
     profile, cfg = load_yaml("resume_profile.yaml"), load_yaml("sources.yaml")
+    programs = load_yaml("priority_programs.yaml").get("programs", {})
     companies = load_yaml("companies.yaml").get("companies", {})
     store = StateStore(ROOT / "data" / "state.json")
     jobs, errors = collect(cfg)
+    jobs = prepare_jobs(jobs, programs)
     ready = []
     for job in jobs:
-        assessment = assess(job.as_dict(), profile, companies.get(job.company)).as_dict()
-        record, new = store.upsert(job.as_dict(), assessment)
+        assessment = assess(job, profile, companies.get(job["company"])).as_dict()
+        record, new = store.upsert(job, assessment)
         if new and record["status"] == "ready_for_review": ready.append(record)
     store.add_run({"checked": len(jobs), "new_ready": len(ready), "errors": errors})
     store.save(); store.save_queue(ROOT / "data" / "review_queue.json")
