@@ -21,7 +21,7 @@ def test_cloud_queues_are_merged_and_priority_copy_wins(monkeypatch):
     def get(url, **kwargs):
         payload = {"generated_at": "2026-08-29", "jobs": [priority]} if "priority_queue" in url else {"generated_at": "2026-08-28", "jobs": [ordinary]}
         return Response(payload)
-    monkeypatch.setattr(mac_agent.requests, "get", get)
+    monkeypatch.setattr(mac_agent.SESSION, "get", get)
     queue = mac_agent.fetch_queue()
     assert queue["generated_at"] == "2026-08-29"
     assert queue["jobs"] == [priority]

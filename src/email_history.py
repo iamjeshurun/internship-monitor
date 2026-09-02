@@ -1,21 +1,65 @@
 from __future__ import annotations
 import argparse, email, json, os, re, subprocess
+from email.utils import parseaddr
 from email.policy import default
 from pathlib import Path
 import requests
 
 PATTERNS = [
-    re.compile(r"thank you for apply(?:ing|ied)", re.I),
-    re.compile(r"thank(?:s| you) for your interest", re.I),
-    re.compile(r"application (?:has been )?received", re.I),
+    re.compile(r"thank(?:s| you) for apply(?:ing)", re.I),
+    re.compile(r"thank(?:s| you) for your (?:application|interest)", re.I),
+    re.compile(r"application (?:has been |was )?received", re.I),
     re.compile(r"application (?:was |has been )?submitted", re.I),
     re.compile(r"we received your application", re.I),
-    re.compile(r"we have received", re.I),
-    re.compile(r"your application to", re.I),
+    re.compile(r"we have received your application", re.I),
     re.compile(r"candidate application", re.I),
     re.compile(r"application confirmation", re.I),
+    re.compile(r"important information about your application", re.I),
 ]
-STAGES = [("offer", re.compile(r"offer of employment|pleased to offer|employment offer", re.I)), ("assessment", re.compile(r"assessment|coding challenge|hackerrank|codesignal", re.I)), ("interview", re.compile(r"interview|schedule a call", re.I)), ("rejected", re.compile(r"unfortunately|not moving forward|other candidates", re.I))]
+STAGES = [
+    ("rejected", re.compile(r"unfortunately|not moving forward|will not (?:be )?moving forward|decided to (?:move|proceed) with other candidates|pursu(?:e|ing) other candidates|not selected|unable to offer|position (?:has been )?filled|won't be proceeding", re.I)),
+    ("offer", re.compile(r"offer of employment|pleased to offer|employment offer", re.I)),
+    ("interview", re.compile(r"interview invitation|invited? (?:you )?to interview|would like to interview|schedule (?:a|your) (?:interview|call|conversation)|next step.{0,50}interview", re.I)),
+    ("assessment", re.compile(r"assessment invitation|invitation for assessments|complete (?:the|your|this) assessment|coding challenge|hackerrank|codesignal|technical exercise", re.I)),
+]
+GENERIC_SENDERS = {"greenhouse", "workday", "ashby", "lever", "icims", "smartrecruiters", "jobvite", "successfactors", "no reply", "noreply"}
+
+def infer_company(subject: str, sender: str) -> str:
+    display, address = parseaddr(sender)
+    candidates = [
+        re.search(r"\bat\s+([^!|–—,]+)$", subject, re.I),
+        re.search(r"thank(?:s| you) for (?:your )?(?:application|interest) (?:in|to|at) ([^!|–—,]+)", subject, re.I),
+        re.search(r"(?:your )?application to ([^!|–—,]+)", subject, re.I),
+        re.search(r"we received your ([^!|–—,]+?) application", subject, re.I),
+        re.search(r"successfully applied to ([^!|–—,]+)", subject, re.I),
+        re.search(r"^([^|–—-]+?)\s*[-–—:]\s*(?:application|candidate)", subject, re.I),
+        re.search(r"application (?:received|submitted).*?\b(?:at|to)\s+([^!|–—,]+)", subject, re.I),
+    ]
+    for match in candidates:
+        if match:
+            value = match.group(1).strip().strip(".!:;-–—")
+            if 1 < len(value) < 80: return value
+    shown = (display or "").strip(' "')
+    if shown and not any(generic in shown.lower() for generic in GENERIC_SENDERS): return shown
+    local = address.split("@", 1)[0] if "@" in address else ""
+    if local and local.lower() not in GENERIC_SENDERS and not local.lower().startswith(("no-reply", "noreply", "recruit")):
+        return re.sub(r"[._-]+", " ", local).title()
+    domain = address.split("@", 1)[1].lower() if "@" in address else ""
+    labels = [x for x in domain.split(".") if x not in {"com", "org", "net", "us", "io", "co", "jobs", "mail", "email", "careers", "myworkday"}]
+    if labels: return labels[-1].replace("-", " ").title()
+    return shown or address or "Unknown employer"
+
+def infer_role(subject: str) -> str:
+    cleaned = re.sub(r"^(?:re:|fwd:)\s*", "", subject, flags=re.I).strip()
+    patterns = [
+        r"thanks? for applying to (?:the )?(.+?)(?: role)? at ",
+        r"thank you for your (?:application|interest)(?: in| to)? (.+)",
+        r"^.+?[-–—:]\s*application received(?:\s*[-–—:]\s*(.+))?$",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, cleaned, re.I)
+        if match and match.lastindex and match.group(1): return match.group(1).strip()
+    return cleaned
 
 def classify(subject: str, body: str, sender: str, date: str) -> dict | None:
     text = f"{subject}\n{body}"
@@ -23,9 +67,9 @@ def classify(subject: str, body: str, sender: str, date: str) -> dict | None:
     stage = "applied"
     for name, pattern in STAGES:
         if pattern.search(text): stage = name; break
-    req = re.search(r"(?:requisition|job id|req(?:uisition)?)[ #:.-]*([A-Z0-9-]{4,})", text, re.I)
-    company = sender.split("<")[0].strip(' "') or sender
-    return {"subject": subject, "company_hint": company, "date": date, "stage": stage, "requisition_id": req.group(1) if req else None, "confidence": "high" if any(p.search(text) for p in PATTERNS) else "medium"}
+    req = re.search(r"\b(?:requisition|job id|req(?:uisition)?)\b[ #:.-]*((?=[A-Z0-9-]*\d)[A-Z0-9-]{4,})", text, re.I)
+    company = infer_company(subject, sender)
+    return {"subject": subject, "company_hint": company, "role_hint": infer_role(subject), "date": date, "stage": stage, "requisition_id": req.group(1) if req else None, "confidence": "high" if any(p.search(text) for p in PATTERNS) else "medium"}
 
 def eml_directory(path: Path) -> list[dict]:
     results = []
@@ -71,19 +115,30 @@ def apple_mail(account_address: str, years: int = 5, days: int | None = None) ->
 tell application "Mail"
   set cutoffDate to (current date) - ({lookback_days} * days)
   set keywords to {{"application", "applied", "interest", "received", "assessment", "coding challenge", "interview", "offer", "not moving forward", "unfortunately"}}
-  set usefulMailboxes to {{"INBOX", "Inbox"}}
+  set usefulMailboxes to {{"INBOX", "Inbox", "Archive", "All Mail"}}
   set recordSep to ASCII character 30
   set fieldSep to ASCII character 31
   set outputText to ""
   repeat with acct in every account
     if (email addresses of acct) contains "{safe_address}" then
-      repeat with box in every mailbox of acct
+      set boxesToScan to every mailbox of acct
+      repeat with parentBox in every mailbox of acct
+        try
+          set boxesToScan to boxesToScan & (every mailbox of parentBox)
+        end try
+      end repeat
+      repeat with box in boxesToScan
         if usefulMailboxes contains (name of box) then
           repeat with keywordText in keywords
             try
               set matchingMessages to (every message of box whose date received > cutoffDate and subject contains keywordText)
               repeat with msg in matchingMessages
-                set outputText to outputText & (message id of msg) & fieldSep & (subject of msg) & fieldSep & (sender of msg) & fieldSep & ((date received of msg) as string) & recordSep
+                set bodyText to ""
+                try
+                  set bodyText to content of msg
+                  if (length of bodyText) > 1200 then set bodyText to text 1 thru 1200 of bodyText
+                end try
+                set outputText to outputText & (message id of msg) & fieldSep & (subject of msg) & fieldSep & (sender of msg) & fieldSep & ((date received of msg) as string) & fieldSep & bodyText & recordSep
               end repeat
             end try
           end repeat
@@ -101,10 +156,10 @@ end tell
     found, seen = [], set()
     for row in proc.stdout.split(chr(30)):
         fields = row.strip().split(chr(31))
-        if len(fields) != 4 or fields[0] in seen:
+        if len(fields) != 5 or fields[0] in seen:
             continue
         seen.add(fields[0])
-        item = classify(fields[1], "", fields[2], fields[3])
+        item = classify(fields[1], fields[4], fields[2], fields[3])
         if item:
             item["mailbox_account"] = account_address
             found.append(item)

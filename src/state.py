@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
@@ -50,7 +50,8 @@ class StateStore:
         self.data["runs"] = self.data["runs"][-100:]
 
     def ready_queue(self) -> list[dict]:
-        jobs = [j for j in self.data["jobs"].values() if j.get("status") == "ready_for_review"]
+        active_cutoff = datetime.now(timezone.utc) - timedelta(hours=36)
+        jobs = [j for j in self.data["jobs"].values() if j.get("status") == "ready_for_review" and datetime.fromisoformat(j.get("last_seen", j["first_seen"])) >= active_cutoff]
         return sorted(jobs, key=lambda j: (-bool(j.get("priority_program")), -bool((j.get("priority_program") or {}).get("official_source")), -j["assessment"]["score"], j.get("first_seen", "")))
 
     def save(self):

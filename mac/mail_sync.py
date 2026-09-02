@@ -19,8 +19,12 @@ def notify(event):
 
 def main():
     LOCAL.mkdir(parents=True, exist_ok=True)
-    previous = load_json(HISTORY, {"applications": []}).get("applications", []); known = {event_key(event) for event in previous}; combined = list(previous)
-    for account in ACCOUNTS: combined.extend(apple_mail(account, days=45))
+    previous = load_json(HISTORY, {"applications": []}).get("applications", []); known = {event_key(event) for event in previous}; combined = []
+    for account in ACCOUNTS:
+        try: combined.extend(apple_mail(account, days=45))
+        except Exception as exc:
+            print(f"Mail scan warning for {account}: {exc}", file=sys.stderr)
+            combined.extend(event for event in previous if event.get("mailbox_account") == account)
     unique = {event_key(event): event for event in combined}; new = [event for key, event in unique.items() if key not in known]
     HISTORY.write_text(json.dumps({"applications": sorted(unique.values(), key=lambda item: item.get("date", ""), reverse=True)}, indent=2))
     for event in new: notify(event)
