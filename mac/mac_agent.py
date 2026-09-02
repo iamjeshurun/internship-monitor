@@ -24,6 +24,13 @@ def fetch_queue():
         if r.status_code == 404 and filename == "priority_queue.json": continue
         r.raise_for_status(); payload = r.json(); generated = max(generated, payload.get("generated_at") or "")
         for job in payload.get("jobs", []): jobs[job["key"]] = job
+    # The fast priority watcher runs on this Mac. Merge its queue over the
+    # slower cloud queues so newly opened programs are available immediately.
+    local_priority = ROOT / "data" / "priority_queue.json"
+    if local_priority.exists():
+        payload = json.loads(local_priority.read_text())
+        generated = max(generated, payload.get("generated_at") or "")
+        for job in payload.get("jobs", []): jobs[job["key"]] = job
     return {"generated_at": generated, "jobs": list(jobs.values())}
 
 def notify(job):

@@ -5,7 +5,7 @@ Cloud discovery on GitHub Actions, native review notifications on macOS, and hum
 ## Safety and operating boundary
 
 - Discovery, scoring, queuing, reporting, and notifications can run unattended.
-- A focused priority-program watcher runs every ten minutes for programs such as Google STEP, Microsoft Explore, Meta University, UberSTAR, and NVIDIA Ignite. Alias matches are deduplicated across sources, official links are preferred, and unverified aggregator links are labeled for review.
+- A focused priority-program watcher runs locally on macOS every ten minutes for programs such as Google STEP, Microsoft Explore, Meta University, UberSTAR, and NVIDIA Ignite. Alias matches are deduplicated across sources, official links are preferred, and unverified aggregator links are labeled for review.
 - Application prep can assemble saved answers and open the employer form.
 - Login, CAPTCHAs, ambiguous legal/sponsorship questions, and final submission require live review.
 - The system never follows, messages, or DMs recruiters automatically.
@@ -65,7 +65,7 @@ The Simplify source remains enabled for broad discovery. It has no job descripti
 4. Confirm `data/state.json` and `data/review_queue.json` update.
 5. Subscribe to the private `Job Monitor Alerts` issue. In GitHub notification settings, enable **Email** and **On GitHub** for **Participating and @mentions** and select a verified destination email.
 
-The monitor runs at minutes 7 and 37 each hour, uses a concurrency lock, and commits only durable state files. Tests run on code changes, not every polling cycle.
+The cloud monitor runs every two hours, uses a concurrency lock, and commits only durable state files. The priority watcher runs every ten minutes on the Mac, with its GitHub workflow retained only as a manual fallback. Tests run on code changes, not every polling cycle.
 
 ## MacBook notification setup
 
@@ -77,7 +77,7 @@ export JOB_MONITOR_GITHUB_TOKEN="fine-grained-read-only-token"
 python mac/mac_agent.py
 ```
 
-Store the token in macOS Keychain or another credential manager before enabling the LaunchAgents. The installer creates the queue poller, always-on dashboard, and 15-minute mailbox sync. The Mac catches up after sleep; GitHub continues searching while it is offline.
+Store the token in macOS Keychain or another credential manager before enabling the LaunchAgents. The installer creates the queue poller, ten-minute priority watcher, always-on dashboard, and 15-minute mailbox sync. The Mac catches up after sleep; the two-hour GitHub search continues while it is offline.
 
 ## Outlook, Gmail, and existing applications
 

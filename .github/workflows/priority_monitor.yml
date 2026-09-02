@@ -1,7 +1,7 @@
 name: Priority Program Monitor
 on:
-  schedule:
-    - cron: "3,13,23,33,43,53 * * * *"
+  # Kept as a manual fallback. The scheduled priority watcher runs locally on
+  # macOS, where repeated short jobs do not consume GitHub-hosted minutes.
   workflow_dispatch: {}
 permissions:
   contents: write
@@ -36,4 +36,3 @@ jobs:
           git commit -m "Update priority program state [skip ci]"
           git pull --rebase origin "$GITHUB_REF_NAME"
           git push origin "HEAD:$GITHUB_REF_NAME"
-
