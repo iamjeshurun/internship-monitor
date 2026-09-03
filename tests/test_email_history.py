@@ -12,6 +12,10 @@ def test_interest_confirmation_classified():
 def test_rejection_language_overrides_thank_you_language():
     r = classify("Thank you for applying", "Unfortunately, we decided to move forward with other candidates.", "Acme", "today")
     assert r["stage"] == "rejected"
+def test_microsoft_receipt_status_help_is_not_a_rejection():
+    body = "We received your application. Closed means the position is either no longer open, you withdrew from consideration, or you were not selected for the role. How's your profile?"
+    r = classify("Thank you for your application!", body, "Microsoft Careers <donotreply@email.careers.microsoft.com>", "today")
+    assert r["stage"] == "applied"
 def test_security_code_is_not_an_application_receipt():
     assert classify("Security code for your application to Hooli AI", "Use 123456 to continue.", "Greenhouse", "today") is None
 def test_company_is_inferred_from_ats_email_address():

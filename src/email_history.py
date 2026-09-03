@@ -23,6 +23,12 @@ STAGES = [
     ("assessment", re.compile(r"assessment invitation|invitation for assessments|complete (?:the|your|this) assessment|coding challenge|hackerrank|codesignal|technical exercise", re.I)),
 ]
 GENERIC_SENDERS = {"greenhouse", "workday", "ashby", "lever", "icims", "smartrecruiters", "jobvite", "successfactors", "no reply", "noreply"}
+NON_STATUS_BOILERPLATE = [
+    # Microsoft application receipts explain every possible portal state. This
+    # sentence describes what a future closed state could mean; it is not the
+    # outcome communicated by the current message.
+    re.compile(r"means the position is either no longer open,\s*you withdrew from consideration,\s*or you were not selected for the role", re.I),
+]
 
 def infer_company(subject: str, sender: str) -> str:
     display, address = parseaddr(sender)
@@ -64,9 +70,12 @@ def infer_role(subject: str) -> str:
 def classify(subject: str, body: str, sender: str, date: str) -> dict | None:
     text = f"{subject}\n{body}"
     if not any(p.search(text) for p in PATTERNS) and not any(p.search(text) for _, p in STAGES): return None
+    status_text = text
+    for boilerplate in NON_STATUS_BOILERPLATE:
+        status_text = boilerplate.sub("", status_text)
     stage = "applied"
     for name, pattern in STAGES:
-        if pattern.search(text): stage = name; break
+        if pattern.search(status_text): stage = name; break
     req = re.search(r"\b(?:requisition|job id|req(?:uisition)?)\b[ #:.-]*((?=[A-Z0-9-]*\d)[A-Z0-9-]{4,})", text, re.I)
     company = infer_company(subject, sender)
     return {"subject": subject, "company_hint": company, "role_hint": infer_role(subject), "date": date, "stage": stage, "requisition_id": req.group(1) if req else None, "confidence": "high" if any(p.search(text) for p in PATTERNS) else "medium"}
