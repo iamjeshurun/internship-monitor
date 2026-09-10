@@ -38,3 +38,35 @@ def test_direct_hackerrank_request_is_assessment():
     assert r["stage"] == "assessment"
 def test_request_word_is_not_mistaken_for_requisition_id():
     assert classify("Application received", "We received your request.", "Acme", "today")["requisition_id"] is None
+
+def test_unfortunately_boilerplate_in_receipt_is_not_rejection():
+    body = "Thank you for applying! Unfortunately, due to the very high volume of applications we are unable to respond to everyone individually."
+    r = classify("Your application to Stripe", body, "Stripe", "today")
+    assert r["stage"] == "applied"
+
+def test_high_volume_disclaimer_is_not_rejection():
+    body = "We have received your application. We regret that we cannot provide individual feedback to every candidate."
+    r = classify("Application received", body, "Acme Talent", "today")
+    assert r["stage"] == "applied"
+
+def test_real_rejection_with_unfortunately_and_context_is_rejected():
+    body = "Unfortunately, after careful review we will not be moving forward with your application at this time."
+    r = classify("Update on your application", body, "Acme", "today")
+    assert r["stage"] == "rejected"
+
+def test_moving_forward_with_other_candidates_is_rejection_despite_received_subject():
+    r = classify("Thank you for applying to Acme", "We have decided to move forward with other candidates.", "Acme", "today")
+    assert r["stage"] == "rejected"
+
+def test_online_assessment_reminder_is_assessment():
+    r = classify("Reminder: complete your online assessment", "Please finish your online assessment before Friday.", "Acme", "today")
+    assert r["stage"] == "assessment"
+
+def test_you_may_be_asked_to_take_an_assessment_is_not_assessment():
+    body = "Thank you for your interest. Later in the process you may be asked to complete a coding challenge."
+    r = classify("Thank you for your interest in Acme", body, "Acme", "today")
+    assert r["stage"] == "applied"
+
+def test_phone_screen_invitation_is_interview():
+    r = classify("Next steps with Acme", "We'd like to schedule a phone screen with you next week.", "Acme", "today")
+    assert r["stage"] == "interview"

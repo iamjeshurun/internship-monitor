@@ -5,8 +5,10 @@ from pathlib import Path
 
 STAGE_ORDER = {"ready": 0, "reviewing": 1, "applied": 2, "assessment": 3, "interview": 4, "offer": 5, "rejected": 5, "dismissed": 6}
 STOP = {"job", "application", "intern", "internship", "the", "and", "for", "at", "you", "your", "from", "team"}
-GENERIC_ROLE = {"thank", "thanks", "interest", "received", "submitted", "invitation", "assessment", "assessments", "process", "prepare", "track", "important", "information", "successfully", "applied", "update"}
-GENERIC_COMPANY = {"capital", "company", "corp", "corporation", "group", "holdings", "inc", "llc", "careers", "recruiting", "talent", "trading"}
+GENERIC_ROLE = {"thank", "thanks", "interest", "received", "submitted", "invitation", "assessment", "assessments", "process", "prepare", "track", "important", "information", "successfully", "applied", "update", "reminder", "action", "required", "complete", "completed", "completing", "next", "step", "steps", "take", "status"}
+GENERIC_COMPANY = {"capital", "company", "corp", "corporation", "group", "holdings", "inc", "llc", "careers", "recruiting", "talent", "trading", "assessments", "assessment", "hiring", "jobs", "team", "global", "technologies", "labs", "no", "reply", "noreply"}
+# ATS / assessment vendors that mask the real employer in the sender line.
+ATS_VENDORS = {"greenhouse", "workday", "myworkday", "ashby", "ashbyhq", "lever", "icims", "smartrecruiters", "jobvite", "successfactors", "shl", "hackerrank", "codesignal", "criteria", "hirevue", "modernhire"}
 
 def load_json(path: Path, fallback):
     try: return json.loads(path.read_text())
@@ -19,17 +21,24 @@ def event_key(event: dict) -> str:
     raw = "\x1f".join(str(event.get(k, "")) for k in ("mailbox_account", "date", "subject"))
     return "email-" + hashlib.sha256(raw.encode()).hexdigest()[:20]
 
+def company_tokens(value: str) -> set[str]:
+    """Tokens that identify an employer, minus ATS vendors and generic suffixes.
+
+    Also keeps 2-letter names (GE, EY, HP, 3M) that ``tokens`` would drop.
+    """
+    raw = {x for x in re.findall(r"[a-z0-9&]+", (value or "").lower()) if x not in STOP}
+    return {x for x in raw if len(x) > 1 and x not in GENERIC_COMPANY and x not in ATS_VENDORS}
+
+
 def application_key(event: dict) -> str:
     req = str(event.get("requisition_id") or "").strip().lower()
     if req:
         return "application-req-" + hashlib.sha256(req.encode()).hexdigest()[:20]
-    company_tokens = tokens(event.get("company_hint", ""))
-    company = "-".join(sorted(company_tokens)) or re.sub(r"[^a-z0-9]+", "-", event.get("company_hint", "").lower()).strip("-")
-    role_tokens = tokens(event.get("role_hint", "")) - company_tokens - GENERIC_ROLE
-    if event.get("stage") == "assessment":
-        role_tokens -= {"action", "required", "reminder", "complete", "completed", "completing", "skills", "next", "step", "take"}
+    ctoks = company_tokens(event.get("company_hint", ""))
+    company = "-".join(sorted(ctoks)) or re.sub(r"[^a-z0-9]+", "-", event.get("company_hint", "").lower()).strip("-")
+    role_tokens = tokens(event.get("role_hint", "")) - ctoks - GENERIC_ROLE
     role = "-".join(sorted(role_tokens)) or "general"
-    if company and company not in {"greenhouse", "workday", "ashby", "lever", "icims"}:
+    if company and company not in ATS_VENDORS:
         raw = f"{company}|{role}"
         return "application-" + hashlib.sha256(raw.encode()).hexdigest()[:20]
     return event_key(event)
@@ -38,19 +47,30 @@ def match_event(event: dict, jobs: list[dict]) -> dict | None:
     req = str(event.get("requisition_id") or "").lower()
     if req:
         exact = next((j for j in jobs if req in " ".join(str(j.get(k, "")).lower() for k in ("external_id", "url", "title"))), None)
-        if exact: return exact
+        if exact:
+            return exact
+    event_company = company_tokens(event.get("company_hint", ""))
     event_tokens = tokens(f"{event.get('subject','')} {event.get('company_hint','')}")
     ranked = []
     for job in jobs:
-        company = tokens(job.get("company", "")) - GENERIC_COMPANY
-        event_company = tokens(event.get("company_hint", "")) - GENERIC_COMPANY
+        company = company_tokens(job.get("company", ""))
         title = tokens(job.get("title", ""))
-        company_overlap, title_overlap = len(event_company & company), len(event_tokens & title)
-        score = company_overlap * 4 + title_overlap
+        company_overlap = len(event_company & company)
+        # Require the smaller company-token set to be fully covered, so
+        # "Akuna Capital" never matches "Anthelion Capital" on a shared word.
+        strong_company = bool(event_company) and (event_company <= company or company <= event_company)
+        title_overlap = len(event_tokens & title)
         # Never attach a generic ATS message to a job merely because both titles
         # contain words such as "software engineering intern".
-        if company_overlap: ranked.append((score, job))
-    return max(ranked, key=lambda row: row[0])[1] if ranked else None
+        if company_overlap:
+            ranked.append((strong_company * 8 + company_overlap * 4 + title_overlap, job))
+    if not ranked:
+        return None
+    best_score, best_job = max(ranked, key=lambda row: row[0])
+    # A weak, company-word-only overlap with several candidates is ambiguous.
+    if best_score < 8 and sum(1 for score, _ in ranked if score == best_score) > 1:
+        return None
+    return best_job
 
 def merge_tracker(queue: dict, history: dict, statuses: dict) -> list[dict]:
     jobs = [dict(job) for job in queue.get("jobs", [])]

@@ -25,12 +25,15 @@ class StateStore:
         current = self.data["jobs"].get(job["key"])
         is_new = current is None
         if current is None:
-            current = {**job, "first_seen": now, "status": "discovered", "notification_state": "pending"}
+            current = {**job, "first_seen": now, "status": "discovered"}
         current.update(job)
         current.update({"last_seen": now, "assessment": assessment, "scoring_version": self.data["scoring_version"]})
+        current.pop("became_ready", None)
         if assessment["eligible"] and assessment["score"] >= assessment["notify_threshold"]:
             if current["status"] in {"discovered", "screened_out"}:
                 current["status"] = "ready_for_review"
+                current["ready_since"] = now
+                current["became_ready"] = True  # transitioned this run -> notify
         elif current["status"] in {"discovered", "screened_out", "ready_for_review"}:
             current["status"] = "screened_out"
         if current["status"] == "screened_out":
@@ -50,11 +53,30 @@ class StateStore:
         self.data["runs"] = self.data["runs"][-100:]
 
     def ready_queue(self) -> list[dict]:
-        active_cutoff = datetime.now(timezone.utc) - timedelta(hours=36)
-        jobs = [j for j in self.data["jobs"].values() if j.get("status") == "ready_for_review" and datetime.fromisoformat(j.get("last_seen", j["first_seen"])) >= active_cutoff]
-        return sorted(jobs, key=lambda j: (-bool(j.get("priority_program")), -bool((j.get("priority_program") or {}).get("official_source")), -j["assessment"]["score"], j.get("first_seen", "")))
+        # Keep a job in the queue while a source still reports it (still open).
+        # 72h tolerates a source being briefly unreachable without dropping a
+        # live posting. "Already applied" is resolved on the Mac side (mail
+        # history + manual status), not here.
+        active_cutoff = datetime.now(timezone.utc) - timedelta(hours=72)
+
+        def seen_at(job: dict) -> datetime:
+            raw = job.get("last_seen") or job.get("first_seen")
+            value = datetime.fromisoformat(raw)
+            return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+        jobs = [{k: v for k, v in j.items() if k != "became_ready"}
+                for j in self.data["jobs"].values()
+                if j.get("status") == "ready_for_review" and seen_at(j) >= active_cutoff]
+        return sorted(jobs, key=lambda j: (
+            -bool(j.get("priority_program")),
+            -bool((j.get("priority_program") or {}).get("official_source")),
+            -j["assessment"]["score"],
+            j.get("ready_since", j.get("first_seen", "")),
+        ))
 
     def save(self):
+        for record in self.data["jobs"].values():
+            record.pop("became_ready", None)  # transient per-run signal, not persisted
         self.path.parent.mkdir(parents=True, exist_ok=True)
         tmp = self.path.with_suffix(".tmp")
         tmp.write_text(json.dumps(self.data, indent=2, sort_keys=True))

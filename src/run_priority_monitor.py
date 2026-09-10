@@ -32,7 +32,7 @@ def main():
     for job in jobs:
         assessment = assess(job, profile, companies.get(job["company"])).as_dict()
         record, new = store.upsert(job, assessment)
-        if new and record["status"] == "ready_for_review":
+        if record.get("became_ready"):
             ready.append(record)
     store.add_run({"checked": len(collected), "priority_matches": len(jobs), "new_ready": len(ready), "errors": errors})
     store.save()

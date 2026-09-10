@@ -61,3 +61,25 @@ def test_generic_company_suffix_does_not_match_different_employers():
     event = {"subject":"Thank you for your interest in Akuna Capital", "company_hint":"Akuna Capital", "role_hint":"Unknown role", "stage":"assessment", "date":"2026-08-29", "mailbox_account":"me@example.com"}
     items = merge_tracker({"jobs":[capital_job]}, {"applications":[event]}, {})
     assert len(items) == 2
+
+def test_two_letter_company_name_still_matches():
+    ge_job = {**JOB, "key":"ge1", "company":"GE Vernova", "title":"Energy Software Intern"}
+    event = {"subject":"Thank you for applying to GE Vernova", "company_hint":"GE Vernova", "role_hint":"", "stage":"applied", "date":"2026-09-01", "mailbox_account":"me@example.com"}
+    items = merge_tracker({"jobs":[ge_job]}, {"applications":[event]}, {})
+    assert len(items) == 1 and items[0]["status"] == "applied"
+
+def test_status_update_and_receipt_for_same_company_collapse():
+    events = [
+        {"subject":"We received your application", "company_hint":"Verizon", "role_hint":"", "stage":"applied", "date":"2026-09-01", "mailbox_account":"me@example.com"},
+        {"subject":"Application status update", "company_hint":"Verizon", "role_hint":"", "stage":"applied", "date":"2026-09-03", "mailbox_account":"me@example.com"},
+    ]
+    items = merge_tracker({"jobs":[]}, {"applications":events}, {})
+    assert len(items) == 1 and len(items[0]["events"]) == 2
+
+def test_vendor_masked_sender_does_not_fork_company_row():
+    events = [
+        {"subject":"Thank you for applying to Waymo", "company_hint":"Waymo", "role_hint":"", "stage":"applied", "date":"2026-09-01", "mailbox_account":"me@example.com"},
+        {"subject":"Thank You for Applying to Waymo!", "company_hint":"Waymo", "role_hint":"", "stage":"applied", "date":"2026-09-01", "mailbox_account":"me@example.com"},
+    ]
+    items = merge_tracker({"jobs":[]}, {"applications":events}, {})
+    assert len(items) == 1

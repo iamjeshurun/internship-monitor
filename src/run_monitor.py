@@ -52,7 +52,10 @@ def main():
     for job in jobs:
         assessment = assess(job, profile, companies.get(job["company"])).as_dict()
         record, new = store.upsert(job, assessment)
-        if new and record["status"] == "ready_for_review": ready.append(record)
+        # Notify whenever a job *enters* the ready queue this run — including a
+        # previously screened-out job that now qualifies (description arrived,
+        # scoring changed), not only brand-new discoveries.
+        if record.get("became_ready"): ready.append(record)
     store.add_run({"checked": len(jobs), "new_ready": len(ready), "errors": errors})
     store.save(); store.save_queue(ROOT / "data" / "review_queue.json")
     delivered = send_digest(ready, errors)
