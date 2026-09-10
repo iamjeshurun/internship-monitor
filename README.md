@@ -51,7 +51,11 @@ boards:
     Example Employer: https://example.com/careers
 ```
 
-The Simplify source remains enabled for broad discovery. It has no job descriptions, so its results are explicitly flagged for sponsorship and qualification review.
+The Simplify source remains enabled for broad discovery. When a Simplify listing
+links to a Greenhouse, Lever, or Ashby job URL, the monitor fetches the real job
+description (bounded per run) so skill, sponsorship, and graduation screening can
+run on it. `sources.yaml → freshness_days` is enforced as a hard block on stale
+postings.
 
 ## GitHub deployment
 
@@ -101,7 +105,15 @@ required. After granting Automation access, scan each account locally:
 python src/email_history.py --provider apple-mail --account your-address@example.com
 ```
 
-The importer records inferred company, stage, date, requisition ID, and confidence. It intentionally does not store full message bodies. The installed Mac mailbox service performs this scan every 15 minutes across the configured Gmail and Outlook/Exchange accounts. OAuth application registration and refresh-token custody must be completed for a non-Apple-Mail connection; do not place tokens in GitHub.
+The importer records inferred company, stage, date, requisition ID, and confidence. It intentionally does not store full message bodies. The installed Mac mailbox service performs this scan every 15 minutes across all accounts in `JOB_MONITOR_MAIL_ACCOUNTS` (default: the three configured addresses). Each run scans a short rolling window (`JOB_MONITOR_MAIL_DAYS`, default 21) of the **Inbox and Archive only** — never Gmail's "All Mail", which cannot be scanned within any timeout — using one compound Mail query per mailbox; prior events are merged forward for ~200 days so history is not lost. Per-account scan health is written to `mail_health.json` and surfaced on the dashboard. OAuth application registration and refresh-token custody must be completed for a non-Apple-Mail connection; do not place tokens in GitHub.
+
+### Redeploying code to the running Mac
+
+```bash
+zsh scripts/deploy_runtime.sh
+```
+
+Syncs `src/`, the Mac scripts, and behaviour config into `~/Library/Application Support/JobMonitor/runtime` and reloads the four agents. Account routing (`accounts.yaml`) and private answers are never overwritten. Run `mac/install.sh` instead when dependencies or the LaunchAgent plists change.
 
 ## X internship and recruiter leads
 
