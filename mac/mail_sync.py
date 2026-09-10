@@ -10,7 +10,7 @@ from notifier import notify as native_notify
 
 LOCAL = Path(os.environ.get("JOB_MONITOR_LOCAL_DIR", Path.home()/"Library/Application Support/JobMonitor"))
 HISTORY = LOCAL/"application_history.json"
-ACCOUNTS = [x.strip() for x in os.environ.get("JOB_MONITOR_MAIL_ACCOUNTS", "you@example.com,school.account@example.edu").split(",") if x.strip()]
+ACCOUNTS = [x.strip() for x in os.environ.get("JOB_MONITOR_MAIL_ACCOUNTS", "you@example.com,second.account@example.com,school.account@example.edu").split(",") if x.strip()]
 
 def notify(event):
     title = f"Application update — {event.get('stage','update').title()}"

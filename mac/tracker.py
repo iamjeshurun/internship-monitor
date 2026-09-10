@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 STAGE_ORDER = {"ready": 0, "reviewing": 1, "applied": 2, "assessment": 3, "interview": 4, "offer": 5, "rejected": 5, "dismissed": 6}
-STOP = {"job", "application", "intern", "internship", "the", "and", "for", "at", "your", "from", "team"}
+STOP = {"job", "application", "intern", "internship", "the", "and", "for", "at", "you", "your", "from", "team"}
 GENERIC_ROLE = {"thank", "thanks", "interest", "received", "submitted", "invitation", "assessment", "assessments", "process", "prepare", "track", "important", "information", "successfully", "applied", "update"}
 GENERIC_COMPANY = {"capital", "company", "corp", "corporation", "group", "holdings", "inc", "llc", "careers", "recruiting", "talent", "trading"}
 
@@ -20,9 +20,14 @@ def event_key(event: dict) -> str:
     return "email-" + hashlib.sha256(raw.encode()).hexdigest()[:20]
 
 def application_key(event: dict) -> str:
+    req = str(event.get("requisition_id") or "").strip().lower()
+    if req:
+        return "application-req-" + hashlib.sha256(req.encode()).hexdigest()[:20]
     company_tokens = tokens(event.get("company_hint", ""))
-    company = "-".join(sorted(company_tokens))
+    company = "-".join(sorted(company_tokens)) or re.sub(r"[^a-z0-9]+", "-", event.get("company_hint", "").lower()).strip("-")
     role_tokens = tokens(event.get("role_hint", "")) - company_tokens - GENERIC_ROLE
+    if event.get("stage") == "assessment":
+        role_tokens -= {"action", "required", "reminder", "complete", "completed", "completing", "skills", "next", "step", "take"}
     role = "-".join(sorted(role_tokens)) or "general"
     if company and company not in {"greenhouse", "workday", "ashby", "lever", "icims"}:
         raw = f"{company}|{role}"
@@ -55,7 +60,9 @@ def merge_tracker(queue: dict, history: dict, statuses: dict) -> list[dict]:
         if key not in items:
             items[key] = {"key": key, "company": event.get("company_hint") or "Email-detected application", "title": event.get("role_hint") or event.get("subject") or "Application update", "location": "", "url": "", "assessment": {"score": "—", "reasons": [], "flags": []}, "status": "applied", "status_source": "email"}
         item, manual, stage = items[key], statuses.get(key), event.get("stage", "applied")
-        if not manual and STAGE_ORDER.get(stage, 0) >= STAGE_ORDER.get(item.get("status", "ready"), 0): item["status"], item["status_source"] = stage, "email"
+        manual_status = manual.get("status") if isinstance(manual, dict) else manual
+        email_can_update = not manual or manual_status in {"ready", "reviewing"}
+        if email_can_update and STAGE_ORDER.get(stage, 0) >= STAGE_ORDER.get(item.get("status", "ready"), 0): item["status"], item["status_source"] = stage, "email"
         item.setdefault("events", []).append(event); item["last_update"] = event.get("date", "")
     return sorted(items.values(), key=lambda item: (STAGE_ORDER.get(item.get("status", "ready"), 0), item.get("last_update", "")), reverse=True)
 

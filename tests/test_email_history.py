@@ -21,5 +21,20 @@ def test_security_code_is_not_an_application_receipt():
 def test_company_is_inferred_from_ats_email_address():
     assert infer_company("Thank You for Your Interest - Engineering Intern", "disney@myworkday.com") == "Disney"
     assert infer_company("Prepare for your application process", "no-reply@optiver.us") == "Optiver"
+    assert infer_company("Important information about your C3 AI application", "Greenhouse Mail <no-reply@greenhouse.io>") == "C3 AI"
+    assert infer_company("Reminder: Complete your EY skills assessment", "SHL <no-reply@shl.com>") == "EY"
+def test_bare_not_selected_help_text_is_not_rejection():
+    r = classify("Thank you for your Application!", "If you are not selected, please consider other roles.", "S&P Global", "today")
+    assert r["stage"] == "applied"
+def test_direct_decided_not_to_proceed_is_rejection():
+    r = classify("Application update", "We have decided not to proceed with your candidacy.", "Acme", "today")
+    assert r["stage"] == "rejected"
+def test_assessment_vendor_in_security_boilerplate_is_not_assessment():
+    body = "We received your application. You may receive test invitations via our trusted platforms HackerRank.com and Criteria.com."
+    r = classify("Thank you for your interest in Akuna Capital!", body, "Akuna Capital", "today")
+    assert r["stage"] == "applied"
+def test_direct_hackerrank_request_is_assessment():
+    r = classify("Next steps", "Please complete your HackerRank challenge by Friday.", "Acme", "today")
+    assert r["stage"] == "assessment"
 def test_request_word_is_not_mistaken_for_requisition_id():
     assert classify("Application received", "We received your request.", "Acme", "today")["requisition_id"] is None

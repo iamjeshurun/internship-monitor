@@ -17,10 +17,10 @@ PATTERNS = [
     re.compile(r"important information about your application", re.I),
 ]
 STAGES = [
-    ("rejected", re.compile(r"unfortunately|not moving forward|will not (?:be )?moving forward|decided to (?:move|proceed) with other candidates|pursu(?:e|ing) other candidates|not selected|unable to offer|position (?:has been )?filled|won't be proceeding", re.I)),
+    ("rejected", re.compile(r"unfortunately|regret to inform|not moving forward|will not (?:be )?moving forward|decided (?:not to (?:move|proceed|continue)|to (?:move|proceed) with other candidates)|pursu(?:e|ing) other candidates|we (?:are )?unable to offer|position (?:has been )?filled|won't be proceeding", re.I)),
     ("offer", re.compile(r"offer of employment|pleased to offer|employment offer", re.I)),
     ("interview", re.compile(r"interview invitation|invited? (?:you )?to interview|would like to interview|schedule (?:a|your) (?:interview|call|conversation)|next step.{0,50}interview", re.I)),
-    ("assessment", re.compile(r"assessment invitation|invitation for assessments|complete (?:the|your|this) assessment|coding challenge|hackerrank|codesignal|technical exercise", re.I)),
+    ("assessment", re.compile(r"assessment invitation|invitation for assessments|complete (?:the|your|this) assessment|thank you for complet(?:ing|ed) (?:the|your)?\s*.*?assessment|coding challenge|(?:complete|start|take|invited? (?:you )?to) (?:a |the |your )?(?:hackerrank|codesignal)(?: assessment| challenge| test)?|technical exercise", re.I)),
 ]
 GENERIC_SENDERS = {"greenhouse", "workday", "ashby", "lever", "icims", "smartrecruiters", "jobvite", "successfactors", "no reply", "noreply"}
 NON_STATUS_BOILERPLATE = [
@@ -30,9 +30,14 @@ NON_STATUS_BOILERPLATE = [
     re.compile(r"means the position is either no longer open,\s*you withdrew from consideration,\s*or you were not selected for the role", re.I),
 ]
 
-def infer_company(subject: str, sender: str) -> str:
+def infer_company(subject: str, sender: str, body: str = "") -> str:
     display, address = parseaddr(sender)
     candidates = [
+        re.search(r"important information about your (.+?) application", subject, re.I),
+        re.search(r"(?:complete|completing) your (.+?) skills assessment", subject, re.I),
+        re.search(r"(?:reminder:\s*)?(?:complete|completing) (?:the|your) (.+?) skills assessment", subject, re.I),
+        re.search(r"we(?:'|’)ve got your (.+?) application", subject, re.I),
+        re.search(r"^(.+?) application update$", subject, re.I),
         re.search(r"\bat\s+([^!|–—,]+)$", subject, re.I),
         re.search(r"thank(?:s| you) for (?:your )?(?:application|interest) (?:in|to|at) ([^!|–—,]+)", subject, re.I),
         re.search(r"(?:your )?application to ([^!|–—,]+)", subject, re.I),
@@ -77,7 +82,7 @@ def classify(subject: str, body: str, sender: str, date: str) -> dict | None:
     for name, pattern in STAGES:
         if pattern.search(status_text): stage = name; break
     req = re.search(r"\b(?:requisition|job id|req(?:uisition)?)\b[ #:.-]*((?=[A-Z0-9-]*\d)[A-Z0-9-]{4,})", text, re.I)
-    company = infer_company(subject, sender)
+    company = infer_company(subject, sender, body)
     return {"subject": subject, "company_hint": company, "role_hint": infer_role(subject), "date": date, "stage": stage, "requisition_id": req.group(1) if req else None, "confidence": "high" if any(p.search(text) for p in PATTERNS) else "medium"}
 
 def eml_directory(path: Path) -> list[dict]:
@@ -123,35 +128,43 @@ def apple_mail(account_address: str, years: int = 5, days: int | None = None) ->
     script = f'''
 tell application "Mail"
   set cutoffDate to (current date) - ({lookback_days} * days)
-  set keywords to {{"application", "applied", "interest", "received", "assessment", "coding challenge", "interview", "offer", "not moving forward", "unfortunately"}}
+  set keywords to {{"application", "applied", "interest", "received", "assessment", "coding challenge", "interview", "offer", "not moving forward", "unfortunately", "candidate", "resume", "action required", "next step", "status update"}}
   set usefulMailboxes to {{"INBOX", "Inbox", "Archive", "All Mail"}}
   set recordSep to ASCII character 30
   set fieldSep to ASCII character 31
   set outputText to ""
   repeat with acct in every account
     if (email addresses of acct) contains "{safe_address}" then
-      set boxesToScan to every mailbox of acct
+      set candidateBoxes to every mailbox of acct
       repeat with parentBox in every mailbox of acct
         try
-          set boxesToScan to boxesToScan & (every mailbox of parentBox)
+          set candidateBoxes to candidateBoxes & (every mailbox of parentBox)
         end try
       end repeat
+      set boxesToScan to {{}}
+      repeat with box in candidateBoxes
+        if (name of box) is "All Mail" then set end of boxesToScan to box
+      end repeat
+      if (count of boxesToScan) is 0 then
+        repeat with box in candidateBoxes
+          if usefulMailboxes contains (name of box) then set end of boxesToScan to box
+        end repeat
+      end if
       repeat with box in boxesToScan
-        if usefulMailboxes contains (name of box) then
-          repeat with keywordText in keywords
-            try
-              set matchingMessages to (every message of box whose date received > cutoffDate and subject contains keywordText)
-              repeat with msg in matchingMessages
-                set bodyText to ""
-                try
-                  set bodyText to content of msg
-                  if (length of bodyText) > 1200 then set bodyText to text 1 thru 1200 of bodyText
-                end try
-                set outputText to outputText & (message id of msg) & fieldSep & (subject of msg) & fieldSep & (sender of msg) & fieldSep & ((date received of msg) as string) & fieldSep & bodyText & recordSep
-              end repeat
-            end try
-          end repeat
-        end if
+        repeat with keywordText in keywords
+          try
+            set matchingMessages to (every message of box whose date received > cutoffDate and subject contains keywordText)
+            repeat with msg in matchingMessages
+              set subjectText to subject of msg
+              set bodyText to ""
+              try
+                set bodyText to content of msg
+                if (length of bodyText) > 1200 then set bodyText to text 1 thru 1200 of bodyText
+              end try
+              set outputText to outputText & (message id of msg) & fieldSep & subjectText & fieldSep & (sender of msg) & fieldSep & ((date received of msg) as string) & fieldSep & bodyText & recordSep
+            end repeat
+          end try
+        end repeat
       end repeat
     end if
   end repeat
@@ -170,6 +183,7 @@ end tell
         seen.add(fields[0])
         item = classify(fields[1], fields[4], fields[2], fields[3])
         if item:
+            item["source_message_id"] = fields[0]
             item["mailbox_account"] = account_address
             found.append(item)
     return found

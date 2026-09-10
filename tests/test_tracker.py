@@ -20,6 +20,29 @@ def test_manual_status_overrides_email_stage():
     items = merge_tracker({"jobs":[JOB]}, {"applications":[event]}, {"abc":{"status":"dismissed"}})
     assert items[0]["status"] == "dismissed"
 
+def test_application_email_overrides_stale_manual_ready():
+    event = {"subject":"Application received", "company_hint":"Example Corp", "stage":"applied", "date":"2026-08-29", "mailbox_account":"me@example.com"}
+    items = merge_tracker({"jobs":[JOB]}, {"applications":[event]}, {"abc":{"status":"ready"}})
+    assert items[0]["status"] == "applied"
+
+def test_assessment_reminders_collapse():
+    events = [
+        {"subject":"Action Required: Complete your EY skills assessment", "company_hint":"EY", "role_hint":"Action Required: Complete your EY skills assessment", "stage":"assessment", "date":"2026-09-08", "mailbox_account":"me@example.com"},
+        {"subject":"Reminder: Complete your EY skills assessment", "company_hint":"EY", "role_hint":"Reminder: Complete your EY skills assessment", "stage":"assessment", "date":"2026-09-09", "mailbox_account":"me@example.com"},
+    ]
+    items = merge_tracker({"jobs":[]}, {"applications":events}, {})
+    assert len(items) == 1
+    assert len(items[0]["events"]) == 2
+
+def test_assessment_completion_and_reminder_collapse():
+    events = [
+        {"subject":"Reminder: Complete your EY skills assessment", "company_hint":"EY", "role_hint":"Reminder: Complete your EY skills assessment", "stage":"assessment", "date":"2026-09-09", "mailbox_account":"me@example.com"},
+        {"subject":"Thank you for completing your EY skills assessment", "company_hint":"EY", "role_hint":"Thank you for completing your EY skills assessment", "stage":"assessment", "date":"2026-09-10", "mailbox_account":"me@example.com"},
+    ]
+    items = merge_tracker({"jobs":[]}, {"applications":events}, {})
+    assert len(items) == 1
+    assert len(items[0]["events"]) == 2
+
 def test_generic_title_overlap_does_not_attach_wrong_company():
     event = {"subject":"Application received for Software Engineer Intern", "company_hint":"Other Company", "role_hint":"Software Engineer Intern", "stage":"applied", "date":"2026-08-29", "mailbox_account":"me@example.com"}
     items = merge_tracker({"jobs":[JOB]}, {"applications":[event]}, {})
