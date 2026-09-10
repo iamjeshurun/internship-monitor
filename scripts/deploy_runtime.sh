@@ -17,6 +17,11 @@ rsync -a --delete "$PROJECT_DIR/src/" "$RUNTIME/src/"
 for f in mac_agent.py dashboard.py tracker.py mail_sync.py notifier.py; do
   cp "$PROJECT_DIR/mac/$f" "$RUNTIME/mac/$f"
 done
+# Behaviour config tracked with the code. Account routing and private answers
+# are never overwritten.
+for f in sources.yaml priority_programs.yaml resume_profile.yaml companies.yaml; do
+  cp "$PROJECT_DIR/config/$f" "$RUNTIME/config/$f"
+done
 rm -rf "$RUNTIME"/src/__pycache__ "$RUNTIME"/mac/__pycache__
 
 echo "Reloading agents"
