@@ -24,11 +24,18 @@ for f in sources.yaml priority_programs.yaml resume_profile.yaml companies.yaml;
 done
 rm -rf "$RUNTIME"/src/__pycache__ "$RUNTIME"/mac/__pycache__
 
-echo "Reloading agents"
-for label in poll dashboard mail-sync priority; do
-  plist="$HOME/Library/LaunchAgents/com.jobmonitor.$label.plist"
-  launchctl bootout "gui/$(id -u)/com.jobmonitor.$label" 2>/dev/null || true
-  launchctl bootstrap "gui/$(id -u)" "$plist"
+# The poll / mail-sync / priority agents run the scripts fresh on every
+# StartInterval fire, so they pick up the synced code on their next run with no
+# reload. Only the long-lived dashboard (KeepAlive Flask) must be restarted.
+echo "Restarting dashboard"
+uid="$(id -u)"
+launchctl kickstart -k "gui/$uid/com.jobmonitor.dashboard" 2>/dev/null \
+  || { launchctl bootout "gui/$uid/com.jobmonitor.dashboard" 2>/dev/null || true
+       launchctl bootstrap "gui/$uid" "$HOME/Library/LaunchAgents/com.jobmonitor.dashboard.plist" 2>/dev/null || true; }
+
+# Optional: force an immediate run of the interval agents instead of waiting.
+for label in poll mail-sync priority; do
+  launchctl kickstart "gui/$uid/com.jobmonitor.$label" 2>/dev/null || true
 done
 
 echo "Done. Watch logs:"
