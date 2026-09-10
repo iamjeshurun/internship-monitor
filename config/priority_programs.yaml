@@ -45,9 +45,9 @@ programs:
     name: Two Sigma Early-Career Internship
     companies: [Two Sigma]
     aliases:
-      - "freshm(an|en).*intern"
-      - "first.year.*intern"
-      - "early.career.*intern"
+      - "\\bfreshm(an|en)\\b.{0,40}\\bintern"
+      - "\\bfirst[\\s-]year\\b.{0,40}\\bintern"
+      - "\\bearly[\\s-]career\\b.{0,40}\\bintern"
     official_domains: [twosigma.com]
   palantir_launch:
     name: Palantir Launch

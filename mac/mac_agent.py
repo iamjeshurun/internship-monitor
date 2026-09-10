@@ -1,9 +1,10 @@
 from __future__ import annotations
-import json, os
+import json, os, time
 from datetime import datetime, timezone
 from pathlib import Path
 import requests
 from requests.adapters import HTTPAdapter
+from requests.exceptions import ConnectionError as ReqConnectionError, Timeout
 from urllib3.util.retry import Retry
 from notifier import notify as native_notify
 
@@ -36,6 +37,20 @@ def _load(path: Path, fallback):
         return fallback
 
 
+def _get(url: str, token: str):
+    """GET with the pooled session, then one fresh-connection retry on a
+    transient network error (api.github.com occasionally stalls a kept-alive
+    socket from this host)."""
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github.raw+json"}
+    try:
+        return SESSION.get(url, headers=headers, timeout=(6, 20))
+    except (Timeout, ReqConnectionError):
+        time.sleep(2)
+        with requests.Session() as fresh:
+            fresh.headers["Connection"] = "close"
+            return fresh.get(url, headers=headers, timeout=(8, 35))
+
+
 def fetch_queue():
     local = os.environ.get("JOB_MONITOR_QUEUE_FILE")
     if local:
@@ -44,7 +59,7 @@ def fetch_queue():
     jobs, generated = {}, ""
     for filename in ("review_queue.json", "priority_queue.json"):
         url = f"https://api.github.com/repos/{repo}/contents/data/{filename}"
-        r = SESSION.get(url, headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github.raw+json"}, timeout=(6, 20))
+        r = _get(url, token)
         if r.status_code == 404 and filename == "priority_queue.json":
             continue
         r.raise_for_status()

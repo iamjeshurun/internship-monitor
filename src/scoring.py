@@ -59,18 +59,13 @@ def assess(job: dict, profile: dict, company_meta: dict | None = None) -> Assess
     elif not description: flags.append("sponsorship unknown")
     grad = hits(description, profile.get("graduation", {}).get("reject_phrases", []))
     if grad: blockers.append(f"graduation requirement may conflict: {grad[0]}")
-    age = job.get("age_hours")
-    if isinstance(age, (int, float)):
-        if age <= 24: score += 8; reasons.append("posted within 24 hours")
-        elif age <= 168: score += 4; reasons.append("posted within 7 days")
+    age_hours = job.get("age_hours")
+    if age_hours is None and isinstance(job.get("age_days"), (int, float)):
+        age_hours = job["age_days"] * 24
+    if isinstance(age_hours, (int, float)):
+        if age_hours <= 24: score += 8; reasons.append("posted within 24 hours")
+        elif age_hours <= 168: score += 4; reasons.append("posted within 7 days")
+        max_age_days = profile.get("scoring", {}).get("max_age_days")
+        if max_age_days and age_hours > max_age_days * 24:
+            blockers.append(f"posting older than {max_age_days} days")
     return Assessment(max(0, min(100, score)), not blockers, reasons, blockers, flags, threshold)
-
-def score_job(job: dict, profile: dict):
-    result = assess({**job, "description": job.get("content", "")}, profile)
-    class Compat:
-        score = result.score
-        reasons = result.reasons + result.blockers
-        rejected = not result.eligible
-        strong_match = result.score >= profile["scoring"].get("strong_match_threshold", 70)
-        sponsorship_flag = any("sponsor" in x for x in result.blockers)
-    return Compat()

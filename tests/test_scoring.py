@@ -23,3 +23,10 @@ def test_masters_or_phd_only_role_rejected():
 def test_bachelors_role_not_rejected_as_advanced_degree():
     r = assess(job(description="Python internship for candidates pursuing a bachelor's degree."), PROFILE)
     assert r.eligible
+
+def test_stale_posting_is_blocked_when_max_age_configured():
+    profile = {**PROFILE, "scoring": {**PROFILE["scoring"], "max_age_days": 30}}
+    fresh = assess({**job(age_hours=None), "age_days": 5}, profile)
+    stale = assess({**job(age_hours=None), "age_days": 60}, profile)
+    assert fresh.eligible and not stale.eligible
+    assert any("older than 30 days" in b for b in stale.blockers)

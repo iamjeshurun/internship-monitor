@@ -66,6 +66,54 @@ def x_recent(config: dict, bearer_token: str) -> list[Job]:
     return jobs
 
 
+_ATS_JOB_URL = re.compile(
+    r"boards\.greenhouse\.io/(?:embed/job_app\?for=)?([^/?&]+).*?(?:gh_jid=|/jobs/)(\d+)"
+    r"|job-boards\.greenhouse\.io/([^/?]+)/jobs/(\d+)"
+    r"|jobs\.lever\.co/([^/]+)/([0-9a-f-]{36})"
+    r"|jobs\.ashbyhq\.com/([^/]+)/([0-9a-f-]{36})",
+    re.I,
+)
+
+
+def _fetch_description(url: str) -> str:
+    """Best-effort JD text for an aggregator listing that points at a known ATS."""
+    m = _ATS_JOB_URL.search(url or "")
+    if not m:
+        return ""
+    try:
+        if "greenhouse.io" in url:
+            token = m.group(1) or m.group(3)
+            job_id = m.group(2) or m.group(4)
+            data = _get_json(f"https://boards-api.greenhouse.io/v1/boards/{token}/jobs/{job_id}", timeout=12)
+            return unescape(data.get("content", ""))
+        if "lever.co" in url:
+            data = _get_json(f"https://api.lever.co/v0/postings/{m.group(5)}/{m.group(6)}", timeout=12)
+            return BeautifulSoup(data.get("descriptionPlain") or data.get("description", ""), "html.parser").get_text(" ")
+        if "ashbyhq.com" in url:
+            board = m.group(7)
+            data = _get_json(f"https://api.ashbyhq.com/posting-api/job-board/{board}?includeCompensation=true", timeout=12)
+            for posting in data.get("jobs", []):
+                if m.group(8) in (posting.get("jobUrl", "") + posting.get("applyUrl", "")):
+                    return BeautifulSoup(posting.get("descriptionHtml", ""), "html.parser").get_text(" ")
+    except Exception:
+        return ""
+    return ""
+
+
+def enrich_descriptions(jobs: list[Job], should_fetch, limit: int = 40) -> None:
+    """Fill in descriptions for description-less listings the caller cares about."""
+    fetched = 0
+    for job in jobs:
+        if fetched >= limit:
+            break
+        if job.description or not should_fetch(job):
+            continue
+        text = _fetch_description(job.url)
+        if text:
+            job.description = text
+            fetched += 1
+
+
 def custom_jsonld(company: str, page_url: str) -> list[Job]:
     response = SESSION.get(page_url, timeout=30)
     response.raise_for_status()

@@ -38,3 +38,13 @@ def test_different_locations_remain_distinct():
     second_job = job(location="California")
     second = {**second_job, "priority_program": classify_priority(second_job, PROGRAMS)}
     assert len(deduplicate([first, second])) == 2
+
+
+def test_same_role_from_aggregator_and_official_board_collapses():
+    from priority import location_bucket, normalized_title
+    assert location_bucket("NYC") == location_bucket("New York, NY")
+    assert normalized_title("SWE Intern - Summer 2027") == normalized_title("SWE Internship (Summer 2027)")
+    simplify_copy = {"source": "simplify", "company": "Jane Street", "title": "SWE Intern - Summer 2027", "location": "NYC", "url": "https://simplify.jobs/p/x", "description": ""}
+    official = {"source": "greenhouse", "company": "Jane Street", "title": "SWE Internship (Summer 2027)", "location": "New York, NY", "url": "https://boards.greenhouse.io/janestreet/jobs/1", "description": "full JD"}
+    result = deduplicate([simplify_copy, official])
+    assert len(result) == 1 and result[0]["source"] == "greenhouse"
