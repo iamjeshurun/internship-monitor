@@ -68,6 +68,25 @@ ASSESSMENT = re.compile(
     re.I,
 )
 
+# "Hard" evidence — a concrete next step aimed at the candidate right now, not a
+# description of the process. Used to allow a stage advance when the SUBJECT is a
+# plain application receipt (which otherwise stays "applied").
+OFFER_HARD = re.compile(r"offer of employment|offer letter|pleased to (?:extend|offer) you|your offer (?:details|is attached)", re.I)
+INTERVIEW_HARD = re.compile(
+    r"interview (?:invitation|is (?:scheduled|confirmed)|request)|invit(?:e|ed|ation)[^.\n]{0,30}(?:to )?interview|"
+    r"schedule your interview|book (?:a|your) (?:time|interview)|your interview (?:with|on|is)|"
+    r"available (?:times|slots) for (?:your |a )?interview|calendly\.com|"
+    r"phone screen (?:is|scheduled|with)|(?:pick|choose|select) a time",
+    re.I,
+)
+ASSESSMENT_HARD = re.compile(
+    r"assessment invitation|your assessment (?:link|is ready|is due|must be completed)|"
+    r"complete (?:your |the |this )(?:online |coding |technical |skills )?(?:assessment|challenge|exercise)[^.\n]{0,40}\b(?:by|before|within|link|here)\b|"
+    r"(?:hackerrank|codesignal|hackerearth|codility|coderpad)[^.\n]{0,30}(?:link|invitation|by|due|complete)|"
+    r"thank you for complet(?:ing|ed)[^.\n]{0,40}(?:assessment|challenge|exercise)",
+    re.I,
+)
+
 GENERIC_SENDERS = {"greenhouse", "workday", "ashby", "lever", "icims", "smartrecruiters", "jobvite", "successfactors", "no reply", "noreply"}
 
 # Sentences that describe hypotheticals, definitions, or vendor lists rather than
@@ -79,8 +98,20 @@ NON_STATUS_BOILERPLATE = [
 ]
 _CONDITIONAL_SENTENCE = re.compile(
     r"^\s*(?:if|should|in the event|please note that if|were you|unless)\b|"
-    r"\b(?:means (?:the|that|a|closed)|may be (?:asked|invited|required)|you may (?:receive|be|need|have to)|"
-    r"if (?:you are |you're |you have |not |we )|should you (?:be|not|advance))",
+    r"\b(?:means (?:the|that|a|closed)|may be (?:asked|invited|required|contacted)|you may (?:receive|be|need|have to)|"
+    r"if (?:you are |you're |you have |not |we |your |selected)|should you (?:be|not|advance|progress|proceed))",
+    re.I,
+)
+# Forward-looking "here's how our process works" sentences in a receipt — they
+# describe possible future steps, not this message's outcome.
+_PROCESS_DESCRIPTION = re.compile(
+    r"\b(?:in the coming (?:days|weeks)|over the (?:coming|next) (?:days|weeks)|"
+    r"our (?:team|recruiter|recruiting team|talent team) will (?:review|be in touch|reach out|contact|follow up)|"
+    r"we will (?:review|be in touch|reach out|contact you|follow up|let you know)|"
+    r"you will (?:hear (?:from|back)|be (?:contacted|notified))|"
+    r"if (?:your|there is a) (?:qualifications?|background|match)|"
+    r"next steps (?:in (?:our|the) (?:process|hiring process))|"
+    r"typically|generally|the (?:next|following) (?:phase|stage|steps?) (?:may|might|could|would|involve|include))\b",
     re.I,
 )
 
@@ -90,10 +121,38 @@ def _scrub_boilerplate(text: str) -> str:
         text = pattern.sub(" ", text)
     kept = []
     for sentence in re.split(r"(?<=[.!?\n])\s+", text):
-        if _CONDITIONAL_SENTENCE.search(sentence):
+        if _CONDITIONAL_SENTENCE.search(sentence) or _PROCESS_DESCRIPTION.search(sentence):
             continue
         kept.append(sentence)
     return " ".join(kept)
+
+
+def parse_mail_date(raw) -> str | None:
+    """Normalize a message date to a sortable ISO-8601 string.
+
+    Accepts ISO, RFC-2822, and Apple Mail's localized "Tuesday, September 8,
+    2026 at 3:43:31 PM" form. Returns None if nothing parses.
+    """
+    raw = str(raw or "").strip()
+    if not raw:
+        return None
+    from email.utils import parsedate_to_datetime
+    from datetime import datetime, timezone
+    for parse in (lambda s: datetime.fromisoformat(s.replace("Z", "+00:00")), parsedate_to_datetime):
+        try:
+            dt = parse(raw)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone(timezone.utc).isoformat()
+        except (TypeError, ValueError):
+            pass
+    cleaned = re.sub(r"^[A-Za-z]+,\s*", "", raw).replace(" at ", " ")
+    for fmt in ("%B %d, %Y %I:%M:%S %p", "%B %d, %Y %I:%M:%S%p", "%d %B %Y %I:%M:%S %p", "%B %d, %Y"):
+        try:
+            return datetime.strptime(cleaned, fmt).replace(tzinfo=timezone.utc).isoformat()
+        except ValueError:
+            continue
+    return None
 
 # Employer names that recur under an ATS/vendor sender or a mangled domain.
 COMPANY_ALIASES = {
@@ -191,11 +250,19 @@ def _stage(subject: str, status_text: str) -> str:
     subject_received = bool(SUBJECT_RECEIVED.search(subject))
     if REJECTION_STRONG.search(status_text) or (not subject_received and _soft_rejection(status_text)):
         return "rejected"
-    if OFFER.search(status_text):
+    # When the SUBJECT is a plain application receipt, only advance past "applied"
+    # on a concrete next step aimed at the candidate now — body text describing
+    # the hiring process ("our team may reach out to schedule an interview")
+    # does not make a receipt an interview.
+    if subject_received and not any(p.search(subject) for p in (OFFER, INTERVIEW, ASSESSMENT)):
+        offer_re, interview_re, assessment_re = OFFER_HARD, INTERVIEW_HARD, ASSESSMENT_HARD
+    else:
+        offer_re, interview_re, assessment_re = OFFER, INTERVIEW, ASSESSMENT
+    if offer_re.search(status_text):
         return "offer"
-    if INTERVIEW.search(status_text):
+    if interview_re.search(status_text):
         return "interview"
-    if ASSESSMENT.search(status_text):
+    if assessment_re.search(status_text):
         return "assessment"
     return "applied"
 
@@ -211,7 +278,10 @@ def classify(subject: str, body: str, sender: str, date: str) -> dict | None:
     stage = _stage(subject, status_text)
     req = re.search(r"\b(?:requisition|job id|req(?:uisition)?)\b[ #:.-]*((?=[A-Z0-9-]*\d)[A-Z0-9-]{4,})", text, re.I)
     company = infer_company(subject, sender, body)
-    return {"subject": subject, "company_hint": company, "role_hint": infer_role(subject), "date": date, "stage": stage, "requisition_id": req.group(1) if req else None, "confidence": "high" if matched_pattern else "medium"}
+    return {"subject": subject, "company_hint": company, "role_hint": infer_role(subject), "date": date,
+            "date_iso": parse_mail_date(date), "stage": stage,
+            "requisition_id": req.group(1) if req else None,
+            "confidence": "high" if matched_pattern else "medium"}
 
 def eml_directory(path: Path) -> list[dict]:
     results = []
@@ -275,6 +345,8 @@ tell application "Mail"
   set startedAt to (current date)
   set cutoffDate to startedAt - ({lookback_days} * days)
   set includeNames to {{"INBOX", "Inbox", "Archive", "Archived"}}
+  set jobFolderHints to {{"job", "career", "internship", "intern", "applica", "recruit", "hiring", "offer"}}
+  set excludeNames to {{"All Mail", "[Gmail]/All Mail", "[Gmail]", "Spam", "Junk", "Junk E-mail", "Bulk Mail", "Trash", "Bin", "Deleted Messages", "Deleted Items", "Sent", "Sent Messages", "Sent Items", "Drafts", "Outbox", "Snoozed", "Scheduled"}}
   set recordSep to ASCII character 30
   set fieldSep to ASCII character 31
   set outputText to ""
@@ -288,7 +360,15 @@ tell application "Mail"
       end repeat
       set boxesToScan to {{}}
       repeat with box in candidateBoxes
-        if includeNames contains (name of box) then set end of boxesToScan to box
+        set boxName to (name of box)
+        set includeThis to false
+        if includeNames contains boxName then set includeThis to true
+        if not includeThis and excludeNames does not contain boxName then
+          repeat with hintText in jobFolderHints
+            if boxName contains hintText then set includeThis to true
+          end repeat
+        end if
+        if includeThis then set end of boxesToScan to box
       end repeat
       repeat with box in boxesToScan
         if ((current date) - startedAt) > {inner_budget} then exit repeat

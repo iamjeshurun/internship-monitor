@@ -1,12 +1,11 @@
 from __future__ import annotations
-import json, os, re, sys
-from datetime import datetime, timedelta, timezone
-from email.utils import parsedate_to_datetime
+import json, os, sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT/"src"))
-from email_history import apple_mail
+from email_history import apple_mail, parse_mail_date
 from tracker import event_key, load_json
 from notifier import notify as native_notify
 
@@ -17,29 +16,25 @@ ACCOUNTS = [x.strip() for x in os.environ.get("JOB_MONITOR_MAIL_ACCOUNTS", "you@
 # Each run scans a short window (fast); prior events are merged forward and only
 # retired once they age out, so history is not lost when a window is small.
 SCAN_DAYS = int(os.environ.get("JOB_MONITOR_MAIL_DAYS", "21"))
-RETAIN_DAYS = int(os.environ.get("JOB_MONITOR_MAIL_RETAIN_DAYS", "200"))
+RETAIN_DAYS = int(os.environ.get("JOB_MONITOR_MAIL_RETAIN_DAYS", "365"))
 
 
 def now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def event_ts(event: dict) -> str:
+    return event.get("date_iso") or parse_mail_date(event.get("date")) or ""
+
+
 def event_age_days(event: dict) -> float:
-    raw = str(event.get("date", ""))
-    for parse in (parsedate_to_datetime, datetime.fromisoformat):
-        try:
-            dt = parse(raw)
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            return (datetime.now(timezone.utc) - dt).total_seconds() / 86400
-        except (TypeError, ValueError):
-            continue
-    # Apple Mail's "Tuesday, September 8, 2026 at 3:43:31 PM" localized string.
-    try:
-        dt = datetime.strptime(re.sub(r"^[A-Za-z]+,\s*", "", raw).replace(" at ", " "), "%B %d, %Y %I:%M:%S %p")
-        return (datetime.now() - dt).total_seconds() / 86400
-    except ValueError:
+    iso = event_ts(event)
+    if not iso:
         return 0.0  # unknown age -> keep
+    dt = datetime.fromisoformat(iso)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - dt).total_seconds() / 86400
 
 
 def notify(event):
@@ -55,8 +50,13 @@ def main():
     prior_health = load_json(HEALTH, {}).get("accounts", {})
 
     # Start from prior events that are still within the retention window; the
-    # fresh scan then overwrites any it re-observes and adds new ones.
-    merged = {event_key(e): e for e in previous if event_age_days(e) <= RETAIN_DAYS}
+    # fresh scan then overwrites any it re-observes and adds new ones. Backfill
+    # date_iso on older records written before it existed.
+    merged = {}
+    for e in previous:
+        if event_age_days(e) <= RETAIN_DAYS:
+            e.setdefault("date_iso", parse_mail_date(e.get("date")))
+            merged[event_key(e)] = e
     health = {}
     for account in ACCOUNTS:
         try:
@@ -72,7 +72,7 @@ def main():
 
     new = [event for key, event in merged.items() if key not in known]
     HISTORY.write_text(json.dumps(
-        {"applications": sorted(merged.values(), key=lambda item: item.get("date", ""), reverse=True)}, indent=2))
+        {"applications": sorted(merged.values(), key=event_ts, reverse=True)}, indent=2))
     HEALTH.write_text(json.dumps({
         "updated_at": now(),
         "accounts": health,

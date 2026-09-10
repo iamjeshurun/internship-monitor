@@ -70,3 +70,25 @@ def test_you_may_be_asked_to_take_an_assessment_is_not_assessment():
 def test_phone_screen_invitation_is_interview():
     r = classify("Next steps with Acme", "We'd like to schedule a phone screen with you next week.", "Acme", "today")
     assert r["stage"] == "interview"
+
+def test_receipt_describing_future_interview_stays_applied():
+    body = "Thanks for your interest! Our recruiting team will review your application and, in the coming weeks, may reach out to schedule an interview if your background is a match."
+    r = classify("Thank you for applying to Globex Genealogy!", body, "Globex Genealogy", "today")
+    assert r["stage"] == "applied"
+
+def test_receipt_describing_conditional_assessment_stays_applied():
+    body = "We have received your application. Should you be selected to move forward, you will be invited to complete an online assessment."
+    r = classify("Thank you for applying to Initech Labs", body, "Initech Labs", "today")
+    assert r["stage"] == "applied"
+
+def test_receipt_with_concrete_scheduled_interview_is_interview():
+    r = classify("Thank you for applying to Acme", "Your interview is scheduled for Tuesday at 2pm. Please confirm.", "Acme", "today")
+    assert r["stage"] == "interview"
+
+def test_receipt_with_assessment_link_and_deadline_is_assessment():
+    r = classify("Thank you for applying to Stripe", "Complete your online assessment by Friday using this link: https://x", "Stripe", "today")
+    assert r["stage"] == "assessment"
+
+def test_date_iso_is_attached_and_normalized():
+    r = classify("Application received", "Thank you for applying.", "Acme", "Tuesday, September 8, 2026 at 3:43:31 PM")
+    assert r["date_iso"] == "2026-09-08T15:43:31+00:00"

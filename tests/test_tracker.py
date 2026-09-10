@@ -68,13 +68,49 @@ def test_two_letter_company_name_still_matches():
     items = merge_tracker({"jobs":[ge_job]}, {"applications":[event]}, {})
     assert len(items) == 1 and items[0]["status"] == "applied"
 
-def test_status_update_and_receipt_for_same_company_collapse():
+def test_same_day_roleless_receipts_for_one_company_collapse():
     events = [
-        {"subject":"We received your application", "company_hint":"Verizon", "role_hint":"", "stage":"applied", "date":"2026-09-01", "mailbox_account":"me@example.com"},
-        {"subject":"Application status update", "company_hint":"Verizon", "role_hint":"", "stage":"applied", "date":"2026-09-03", "mailbox_account":"me@example.com"},
+        {"subject":"We received your application", "company_hint":"Verizon", "role_hint":"", "stage":"applied", "date":"2026-09-01T09:00:00Z", "date_iso":"2026-09-01T09:00:00+00:00", "mailbox_account":"me@example.com"},
+        {"subject":"Application received", "company_hint":"Verizon", "role_hint":"", "stage":"applied", "date":"2026-09-01T09:02:00Z", "date_iso":"2026-09-01T09:02:00+00:00", "mailbox_account":"me@example.com"},
     ]
     items = merge_tracker({"jobs":[]}, {"applications":events}, {})
     assert len(items) == 1 and len(items[0]["events"]) == 2
+
+def test_distinct_day_roleless_applications_stay_separate():
+    events = [
+        {"subject":"Thank you for your application!", "company_hint":"Microsoft", "role_hint":"", "stage":"applied", "date":"2026-09-01T09:00:00Z", "date_iso":"2026-09-01T09:00:00+00:00", "mailbox_account":"me@example.com"},
+        {"subject":"Thank you for your application!", "company_hint":"Microsoft", "role_hint":"", "stage":"applied", "date":"2026-09-05T09:00:00Z", "date_iso":"2026-09-05T09:00:00+00:00", "mailbox_account":"me@example.com"},
+    ]
+    items = merge_tracker({"jobs":[]}, {"applications":events}, {})
+    assert len(items) == 2
+
+def test_roleless_rejection_routes_to_preceding_application_not_a_new_row():
+    events = [
+        {"subject":"Thank you for your application!", "company_hint":"Microsoft", "role_hint":"", "stage":"applied", "date":"2026-09-01T09:00:00Z", "date_iso":"2026-09-01T09:00:00+00:00", "mailbox_account":"me@example.com"},
+        {"subject":"Update on your application", "company_hint":"Microsoft", "role_hint":"", "stage":"rejected", "date":"2026-09-10T09:00:00Z", "date_iso":"2026-09-10T09:00:00+00:00", "mailbox_account":"me@example.com"},
+    ]
+    items = merge_tracker({"jobs":[]}, {"applications":events}, {})
+    assert len(items) == 1 and items[0]["status"] == "rejected"
+
+def test_older_offer_does_not_overwrite_newer_rejection():
+    events = [
+        {"subject":"Update on your application", "company_hint":"Acme", "role_hint":"Data Intern", "stage":"rejected", "date":"2026-09-10T09:00:00Z", "date_iso":"2026-09-10T09:00:00+00:00", "mailbox_account":"me@example.com"},
+        {"subject":"Your offer", "company_hint":"Acme", "role_hint":"Data Intern", "stage":"offer", "date":"2026-09-02T09:00:00Z", "date_iso":"2026-09-02T09:00:00+00:00", "mailbox_account":"me@example.com"},
+    ]
+    items = merge_tracker({"jobs":[]}, {"applications":events}, {})
+    assert items[0]["status"] == "rejected"
+    assert items[0]["last_update"] == "2026-09-10T09:00:00Z"
+
+def test_two_openings_same_company_generic_email_is_not_attached():
+    jobs = [
+        {"key":"m1", "company":"Microsoft", "title":"Software Engineer Intern", "location":"Redmond", "url":"u1", "assessment":{"score":60,"reasons":[],"flags":[]}},
+        {"key":"m2", "company":"Microsoft", "title":"Data Scientist Intern", "location":"Redmond", "url":"u2", "assessment":{"score":60,"reasons":[],"flags":[]}},
+    ]
+    event = {"subject":"Thank you for your application!", "company_hint":"Microsoft", "role_hint":"", "stage":"applied", "date":"2026-09-01T09:00:00Z", "date_iso":"2026-09-01T09:00:00+00:00", "mailbox_account":"me@example.com"}
+    items = merge_tracker({"jobs":jobs}, {"applications":[event]}, {})
+    statuses = {i["key"]: i["status"] for i in items}
+    assert statuses.get("m1") == "ready" and statuses.get("m2") == "ready"
+    assert any(i["status"] == "applied" and i["key"] not in ("m1", "m2") for i in items)
 
 def test_vendor_masked_sender_does_not_fork_company_row():
     events = [
