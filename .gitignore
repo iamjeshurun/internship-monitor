@@ -9,3 +9,13 @@ config/private/
 mac/state/
 data/*.tmp
 data/application_history.json
+
+# Personal configuration and runtime data (this is the public edition; generate your own)
+config/accounts.yaml
+config/*.local.yaml
+data/*.json
+notified.json
+status.json
+application_history.json
+mail_health.json
+agent_health.json

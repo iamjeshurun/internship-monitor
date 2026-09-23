@@ -1,0 +1,13 @@
+# Non-secret account routing. Copy to config/accounts.yaml (git-ignored).
+# Passwords, app passwords, OAuth tokens, and API keys belong in GitHub Actions
+# secrets or the macOS Keychain — never in this file.
+notifications:
+  primary_email: you@example.com
+application_history:
+  # Addresses as they appear in Mail.app; also exported as JOB_MONITOR_MAIL_ACCOUNTS.
+  mail_accounts:
+    - you@example.com
+    - school.account@example.edu
+  eml_import_enabled: true
+resume:
+  primary_file: resume.pdf

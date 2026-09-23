@@ -12,7 +12,7 @@ from notifier import notify as native_notify
 LOCAL = Path(os.environ.get("JOB_MONITOR_LOCAL_DIR", Path.home()/"Library/Application Support/JobMonitor"))
 HISTORY = LOCAL/"application_history.json"
 HEALTH = LOCAL/"mail_health.json"
-ACCOUNTS = [x.strip() for x in os.environ.get("JOB_MONITOR_MAIL_ACCOUNTS", "you@example.com,second.account@example.com,school.account@example.edu").split(",") if x.strip()]
+ACCOUNTS = [x.strip() for x in os.environ.get("JOB_MONITOR_MAIL_ACCOUNTS", "").split(",") if x.strip()]  # comma-separated addresses as configured in Mail.app
 # Each run scans a short window (fast); prior events are merged forward and only
 # retired once they age out, so history is not lost when a window is small.
 SCAN_DAYS = int(os.environ.get("JOB_MONITOR_MAIL_DAYS", "21"))
@@ -45,6 +45,9 @@ def notify(event):
 
 def main():
     LOCAL.mkdir(parents=True, exist_ok=True)
+    if not ACCOUNTS:
+        print("Tracker mail sync: set JOB_MONITOR_MAIL_ACCOUNTS (comma-separated Mail.app account addresses); nothing to scan.")
+        return
     previous = load_json(HISTORY, {"applications": []}).get("applications", [])
     known = {event_key(event) for event in previous}
     prior_health = load_json(HEALTH, {}).get("accounts", {})

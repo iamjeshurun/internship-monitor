@@ -118,7 +118,7 @@ def age_to_hours(age_raw: str) -> float:
 
 if __name__ == "__main__":
     import sys
-    with open(sys.argv[1] if len(sys.argv) > 1 else "data/sample_readme.md") as f:
+    with open(sys.argv[1] if len(sys.argv) > 1 else "tests/fixtures/sample_readme.md") as f:
         text = f.read()
     listings = parse_readme(text)
     print(f"Parsed {len(listings)} listings")

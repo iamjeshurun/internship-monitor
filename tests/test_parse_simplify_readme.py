@@ -4,24 +4,24 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from parse_simplify_readme import parse_readme, age_to_hours
 
-SAMPLE = Path(__file__).parent.parent / "data" / "sample_readme.md"
+SAMPLE = Path(__file__).parent / "fixtures" / "sample_readme.md"  # synthetic fixture
 
 
 def test_parses_real_snapshot_without_error():
     text = SAMPLE.read_text()
     listings = parse_readme(text)
-    assert len(listings) > 100  # real snapshot had 663 at time of writing
+    assert len(listings) == 7
 
 def test_continuation_rows_inherit_company_name():
     text = SAMPLE.read_text()
     listings = parse_readme(text)
-    gloss = [l for l in listings if "GlossGenius" in l.company]
-    assert len(gloss) >= 2  # both the initial row and its "↳" continuation
+    example = [l for l in listings if "ExampleCo" in l.company]
+    assert len(example) >= 2  # both the initial row and its "↳" continuation
 
 def test_every_listing_has_a_real_url():
     text = SAMPLE.read_text()
     listings = parse_readme(text)
-    for l in listings[:50]:
+    for l in listings:
         assert l.url.startswith("http")
         assert "simplify.jobs/p/" not in l.url  # should extract the real employer link, not Simplify's
 

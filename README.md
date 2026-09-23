@@ -1,6 +1,22 @@
-# Internship Job Monitor v2
+# Internship Job Monitor
 
-Cloud discovery on GitHub Actions, native review notifications on macOS, and human-reviewed application preparation. This upgrades the original Claude prototype without carrying forward guessed Greenhouse boards, unsafe private answers, or the one-way `seen_jobs.json` design.
+A human-in-the-loop internship discovery and application-tracking system: a cloud pipeline that finds and scores postings, plus local macOS services that reconcile application status from your mailbox and notify you. **It never submits an application on your behalf.**
+
+> **Public edition.** This is a sanitized copy of a private working repository. Personal configuration, runtime data, and account details were removed from every commit (see [docs/ENGINEERING_LOG.md](docs/ENGINEERING_LOG.md#sanitization)); example configs use fictional values. Copy `config/*.example.yaml` and adapt them.
+
+**Quick look (no credentials needed):**
+
+```bash
+python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
+pytest -q                 # 101 tests, incl. fault-injection cases
+python src/run_monitor.py # polls public boards, scores, writes data/ (notifications skipped without secrets)
+```
+
+Architecture, design decisions, reliability findings, and known limitations: **[docs/ENGINEERING_LOG.md](docs/ENGINEERING_LOG.md)**.
+
+---
+
+Cloud discovery on GitHub Actions, native review notifications on macOS, and human-reviewed application preparation. 
 
 ## Safety and operating boundary
 
@@ -105,7 +121,7 @@ required. After granting Automation access, scan each account locally:
 python src/email_history.py --provider apple-mail --account your-address@example.com
 ```
 
-The importer records inferred company, stage, date, requisition ID, and confidence. It intentionally does not store full message bodies. The installed Mac mailbox service performs this scan every 15 minutes across all accounts in `JOB_MONITOR_MAIL_ACCOUNTS` (default: the three configured addresses). Each run scans a short rolling window (`JOB_MONITOR_MAIL_DAYS`, default 21) of the **Inbox and Archive only** — never Gmail's "All Mail", which cannot be scanned within any timeout — using one compound Mail query per mailbox; prior events are merged forward for ~200 days so history is not lost. Per-account scan health is written to `mail_health.json` and surfaced on the dashboard. OAuth application registration and refresh-token custody must be completed for a non-Apple-Mail connection; do not place tokens in GitHub.
+The importer records inferred company, stage, date, requisition ID, and confidence. It intentionally does not store full message bodies. The installed Mac mailbox service performs this scan every 15 minutes across all accounts in `JOB_MONITOR_MAIL_ACCOUNTS` (comma-separated addresses as configured in Mail.app; required — there is no default). Each run scans a short rolling window (`JOB_MONITOR_MAIL_DAYS`, default 21) of the **Inbox and Archive only** — never Gmail's "All Mail", which cannot be scanned within any timeout — using one compound Mail query per mailbox; prior events are merged forward for ~365 days so history is not lost. Per-account scan health is written to `mail_health.json` and surfaced on the dashboard. OAuth application registration and refresh-token custody must be completed for a non-Apple-Mail connection; do not place tokens in GitHub.
 
 ### Redeploying code to the running Mac
 
@@ -133,19 +149,3 @@ The generated packet separates safe saved answers from questions requiring revie
 ### Optional live-browser autofill
 
 `browser-extension/` is the Chromium helper. Safari users can use `safari/job-monitor-autofill.user.js` through the lightweight Userscripts app; Xcode is not required. Save only basic identity fields, then click **Review Autofill** while reviewing an application. Teal fields were filled automatically; orange fields require review. It has no submit capability and stores its small identity profile only in the userscript manager. Do not place passwords, government identifiers, or demographic answers in it.
-
-## Files retained from Claude
-
-- The tested Simplify HTML-table parser.
-- The real Simplify snapshot fixture and parser tests.
-- The 144-company watchlist, résumé-derived skill vocabulary, and basic provider approach.
-
-## Replaced from Claude
-
-- Guessed board tokens.
-- Permanent one-way seen list.
-- California down-ranking.
-- Missing US filtering.
-- Silent email success.
-- Spreadsheet-only state and incomplete daily reports.
-- Sensitive application answers stored inside the repository.
