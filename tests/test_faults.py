@@ -5,7 +5,7 @@ import pytest, requests
 ROOT=Path(__file__).resolve().parent.parent
 import run_monitor as runner, sources, state, mac_agent as agent
 from models import Job
-from priority import deduplicate
+from dedupe import deduplicate
 
 @pytest.fixture(autouse=True)
 def isolation(monkeypatch,tmp_path):

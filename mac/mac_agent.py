@@ -90,34 +90,17 @@ def fetch_queue():
     if local:
         return json.loads(Path(local).read_text())
     repo, token = os.environ["JOB_MONITOR_GITHUB_REPO"], os.environ["JOB_MONITOR_GITHUB_TOKEN"]
-    jobs, generated = {}, ""
-    for filename in ("review_queue.json", "priority_queue.json"):
-        url = f"https://api.github.com/repos/{repo}/contents/data/{filename}"
-        r = _get(url, token)
-        if r.status_code == 404 and filename == "priority_queue.json":
-            continue
-        r.raise_for_status()
-        payload = r.json()
-        generated = max(generated, payload.get("generated_at") or "")
-        for job in payload.get("jobs", []):
-            jobs[job["key"]] = job
-    # The fast priority watcher runs on this Mac. Merge its queue over the
-    # slower cloud queues so newly opened programs are available immediately.
-    local_priority = Path(os.environ.get("JOB_MONITOR_LOCAL_PRIORITY_QUEUE", LOCAL / "priority_queue.local.json"))
-    if local_priority.exists():
-        payload = json.loads(local_priority.read_text())
-        generated = max(generated, payload.get("generated_at") or "")
-        for job in payload.get("jobs", []):
-            jobs[job["key"]] = job
-    return {"generated_at": generated, "jobs": list(jobs.values())}
+    url = f"https://api.github.com/repos/{repo}/contents/data/review_queue.json"
+    r = _get(url, token)
+    r.raise_for_status()
+    payload = r.json()
+    return {"generated_at": payload.get("generated_at") or "", "jobs": payload.get("jobs", [])}
 
 
 def notify(job):
-    priority = job.get("priority_program") or {}
-    title = f"{priority.get('name') or job['company']} — {job['title']}".replace('"', "'")
-    verified = "official source verified" if priority.get("official_source") else "ready for review"
-    message = f"{job['assessment']['score']}/100 · {job.get('location','')} · {verified}".replace('"', "'")
-    app_title = "Priority Program" if priority else "Job Monitor"
+    title = f"{job['company']} — {job['title']}".replace('"', "'")
+    message = f"{job['assessment']['score']}/100 · {job.get('location','')} · ready for review".replace('"', "'")
+    app_title = "Job Monitor"
     if os.environ.get("JOB_MONITOR_DRY_RUN") == "1":
         print("NOTIFY", app_title, title, message)
         return

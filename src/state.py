@@ -68,8 +68,6 @@ class StateStore:
                 for j in self.data["jobs"].values()
                 if j.get("status") == "ready_for_review" and seen_at(j) >= active_cutoff]
         return sorted(jobs, key=lambda j: (
-            -bool(j.get("priority_program")),
-            -bool((j.get("priority_program") or {}).get("official_source")),
             -j["assessment"]["score"],
             j.get("ready_since", j.get("first_seen", "")),
         ))

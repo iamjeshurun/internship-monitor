@@ -94,21 +94,6 @@ def simplify(config: dict) -> list[Job]:
     return jobs
 
 
-def x_recent(config: dict, bearer_token: str) -> list[Job]:
-    query = config.get("query", "")
-    accounts = [f"from:{a}" for a in config.get("watched_accounts", [])]
-    if accounts:
-        query = f"({query}) OR ({' OR '.join(accounts)})"
-    response = _get("https://api.x.com/2/tweets/search/recent", timeout=30, headers={"Authorization": f"Bearer {bearer_token}"}, params={"query": query, "max_results": 100, "tweet.fields": "created_at,author_id,entities"})
-    jobs = []
-    for post in response.json().get("data", []):
-        text = post.get("text", "")
-        urls = [u.get("expanded_url") for u in (post.get("entities") or {}).get("urls", []) if u.get("expanded_url")]
-        url = urls[0] if urls else f"https://x.com/i/web/status/{post['id']}"
-        jobs.append(Job("x", post["id"], "Social lead", text[:140], "", url, text, post.get("created_at"), metadata={"author_id": post.get("author_id")}))
-    return jobs
-
-
 _ATS_JOB_URL = re.compile(
     r"boards\.greenhouse\.io/(?:embed/job_app\?for=)?([^/?&]+).*?(?:gh_jid=|/jobs/)(\d+)"
     r"|job-boards\.greenhouse\.io/([^/?]+)/jobs/(\d+)"

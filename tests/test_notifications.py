@@ -25,14 +25,11 @@ def test_github_alert_comments_on_existing_thread(monkeypatch):
     assert "@owner" in sent["body"]
 
 
-def test_priority_digest_has_priority_subject_and_verification(monkeypatch):
+def test_digest_subject_and_body(monkeypatch):
     sent = {}
     monkeypatch.setattr(notifications, "send_github_alert", lambda subject, body: sent.update(subject=subject, body=body) or True)
-    job = {
-        "company": "Google", "title": "STEP Intern", "location": "USA", "url": "https://careers.google.com/job/1",
-        "assessment": {"score": 90, "reasons": ["program match"], "flags": []},
-        "priority_program": {"name": "Google STEP", "official_source": True},
-    }
+    job = {"company": "Acme", "title": "SWE Intern", "location": "NYC", "url": "https://example.com/1",
+           "assessment": {"score": 80, "reasons": ["role match"], "flags": ["sponsorship unknown"]}}
     assert notifications.send_digest([job], []) is True
-    assert sent["subject"].startswith("PRIORITY PROGRAM")
-    assert "official source verified" in sent["body"]
+    assert sent["subject"] == "ACTION READY: 1 internship match(es)"
+    assert "[80/100] Acme" in sent["body"] and "sponsorship unknown" in sent["body"]

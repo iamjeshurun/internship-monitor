@@ -8,7 +8,7 @@ A human-in-the-loop internship discovery and application-tracking system: a clou
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
-pytest -q                 # 101 tests, incl. fault-injection cases
+pytest -q                 # 98 tests, incl. fault-injection cases
 python src/run_monitor.py # polls public boards, scores, writes data/ (notifications skipped without secrets)
 ```
 
@@ -21,7 +21,6 @@ Cloud discovery on GitHub Actions, native review notifications on macOS, and hum
 ## Safety and operating boundary
 
 - Discovery, scoring, queuing, reporting, and notifications can run unattended.
-- A focused priority-program watcher runs locally on macOS every ten minutes for programs such as Google STEP, Microsoft Explore, Meta University, UberSTAR, and NVIDIA Ignite. Alias matches are deduplicated across sources, official links are preferred, and unverified aggregator links are labeled for review.
 - Application prep can assemble saved answers and open the employer form.
 - Login, CAPTCHAs, ambiguous legal/sponsorship questions, and final submission require live review.
 - The system never follows, messages, or DMs recruiters automatically.
@@ -29,7 +28,7 @@ Cloud discovery on GitHub Actions, native review notifications on macOS, and hum
 
 ## Architecture
 
-1. GitHub Actions polls official Greenhouse, Lever, Ashby, JSON-LD company pages, Simplify, and optional X search.
+1. GitHub Actions polls official Greenhouse, Lever, Ashby, JSON-LD company pages, and Simplify.
 2. Jobs are normalized and stored in `data/state.json`; changing the profile can rescore old jobs.
 3. Strong eligible matches are published to `data/review_queue.json` and appended to the private `Job Monitor Alerts` GitHub issue.
 4. The Mac agent reads the private queue every three minutes and creates native notifications; optional `terminal-notifier` support makes them clickable.
@@ -80,12 +79,11 @@ postings.
    - `SMTP_USER`
    - `SMTP_PASSWORD` (an app password, never the real password)
    - `NOTIFY_EMAIL`
-   - `X_BEARER_TOKEN` only if X monitoring is enabled
 3. Run **Tests**, then manually run **Job Monitor**.
 4. Confirm `data/state.json` and `data/review_queue.json` update.
 5. Subscribe to the private `Job Monitor Alerts` issue. In GitHub notification settings, enable **Email** and **On GitHub** for **Participating and @mentions** and select a verified destination email.
 
-The cloud monitor runs every two hours, uses a concurrency lock, and commits only durable state files. The priority watcher runs every ten minutes on the Mac, with its GitHub workflow retained only as a manual fallback. Tests run on code changes, not every polling cycle.
+The cloud monitor runs every two hours, uses a concurrency lock, and commits only durable state files. Tests run on code changes, not every polling cycle.
 
 ## MacBook notification setup
 
@@ -97,22 +95,9 @@ export JOB_MONITOR_GITHUB_TOKEN="fine-grained-read-only-token"
 python mac/mac_agent.py
 ```
 
-Store the token in macOS Keychain or another credential manager before enabling the LaunchAgents. The installer creates the queue poller, ten-minute priority watcher, always-on dashboard, and 15-minute mailbox sync. The Mac catches up after sleep; the two-hour GitHub search continues while it is offline.
+Store the token in macOS Keychain or another credential manager before enabling the LaunchAgents. The installer creates the queue poller, always-on dashboard, and 15-minute mailbox sync. The Mac catches up after sleep; the two-hour GitHub search continues while it is offline.
 
-## Outlook, Gmail, and existing applications
-
-Privacy-first option: export job confirmations as `.eml` files, then run:
-
-```bash
-python src/email_history.py --eml-dir /path/to/exported/job-mail
-```
-
-API options require short-lived OAuth access tokens with read-only mail scope:
-
-```bash
-OUTLOOK_ACCESS_TOKEN=... python src/email_history.py --provider outlook
-GMAIL_ACCESS_TOKEN=... python src/email_history.py --provider gmail
-```
+## Existing applications (Apple Mail)
 
 On a Mac with the accounts enabled in Apple Mail, no developer OAuth app is
 required. After granting Automation access, scan each account locally:
@@ -129,11 +114,7 @@ The importer records inferred company, stage, date, requisition ID, and confiden
 zsh scripts/deploy_runtime.sh
 ```
 
-Syncs `src/`, the Mac scripts, and behaviour config into `~/Library/Application Support/JobMonitor/runtime` and reloads the four agents. Account routing (`accounts.yaml`) and private answers are never overwritten. Run `mac/install.sh` instead when dependencies or the LaunchAgent plists change.
-
-## X internship and recruiter leads
-
-Set `sources.x.enabled: true`, tune its query, and add `X_BEARER_TOKEN` to GitHub Actions. X results enter the same queue as social leads. Recruiter outreach remains a reviewable draft workflow, not an automatic messaging system.
+Syncs `src/`, the Mac scripts, and behaviour config into `~/Library/Application Support/JobMonitor/runtime` and restarts the dashboard. Account routing (`accounts.yaml`) and private answers are never overwritten. Run `mac/install.sh` instead when dependencies or the LaunchAgent plists change.
 
 ## Application preparation
 
@@ -148,4 +129,4 @@ The generated packet separates safe saved answers from questions requiring revie
 
 ### Optional live-browser autofill
 
-`browser-extension/` is the Chromium helper. Safari users can use `safari/job-monitor-autofill.user.js` through the lightweight Userscripts app; Xcode is not required. Save only basic identity fields, then click **Review Autofill** while reviewing an application. Teal fields were filled automatically; orange fields require review. It has no submit capability and stores its small identity profile only in the userscript manager. Do not place passwords, government identifiers, or demographic answers in it.
+`safari/job-monitor-autofill.user.js` runs through the lightweight Userscripts app; Xcode is not required. Save only basic identity fields, then click **Review Autofill** while reviewing an application. Teal fields were filled automatically; orange fields require review. It has no submit capability and stores its small identity profile only in the userscript manager. Do not place passwords, government identifiers, or demographic answers in it.

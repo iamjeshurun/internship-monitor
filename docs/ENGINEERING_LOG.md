@@ -8,8 +8,7 @@ Design decisions, the bugs that shaped them, and what is still weak. Written for
 GitHub Actions (cloud)                     macOS (local, launchd)
 ──────────────────────                     ──────────────────────────────
 monitor.yml     every 2h  ─┐               poll        3 min   queue → native notifications
-daily_report    daily      │→ data/*.json  mail-sync   15 min  Apple Mail → application events
-tests.yml       on push  ──┘               priority    10 min  program watcher
+tests.yml       on push  ──┘→ data/*.json  mail-sync   15 min  Apple Mail → application events
                                            dashboard   always  Flask :8765, merged tracker view
 ```
 
@@ -50,13 +49,16 @@ Not covered: power-loss durability, consistency between the separately-replaced 
 ## Known limitations
 
 - Mail coverage is Inbox/Archive/job-named folders only; full coverage needs the Gmail/Graph APIs (OAuth).
-- The priority-program watcher only fires on employers using supported ATS boards or Simplify listings that match its aliases.
 - Graduation-year screening is negative-only (blocks known-bad phrasings; no positive "early-career friendly" signal).
 - JSON files as the interchange format are fine at hundreds of rows and would be the first thing to replace at scale.
 
 ## Privacy model
 
 Mailbox access is read-only, local, and metadata-oriented: bodies are used transiently for classification and never stored or uploaded. Secrets live in GitHub Actions secrets and the macOS Keychain. Nothing submits an application; autofill helpers fill only whitelisted identity fields and never touch legal, sponsorship, demographic, CAPTCHA, or submit controls.
+
+## Scope decisions
+
+The private working repository also had a 10-minute "priority program" watcher (Google STEP–style alerts), an X/Twitter source, Outlook/Gmail API and `.eml` importers, a Chromium autofill extension, and a daily email report. They were cut from this edition: the watcher could not fire for its intended employers (they don't publish on the supported ATS APIs), the others were never enabled or used, and each added surface area without changing outcomes. Cutting them removed ~15% of the code and no behaviour the system relies on.
 
 ## Sanitization
 

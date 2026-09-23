@@ -6,10 +6,10 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 from notifications import send_digest
-from priority import classify_priority, deduplicate
+from dedupe import deduplicate
 from scoring import assess
 from scoring import hits
-from sources import ashby, custom_jsonld, enrich_descriptions, greenhouse, lever, simplify, x_recent
+from sources import ashby, custom_jsonld, enrich_descriptions, greenhouse, lever, simplify
 from state import StateStore
 
 def load_yaml(name): return yaml.safe_load((ROOT / "config" / name).read_text())
@@ -27,15 +27,13 @@ def _age_days(value) -> float | None:
     except ValueError:
         return None
 
-def prepare_jobs(jobs, programs):
+def prepare_jobs(jobs):
     prepared = []
     for job in jobs:
         value = job.as_dict()
         age = _age_days(value.get("age_hours")) or _age_days(value.get("posted_at"))
         if age is not None:
             value["age_days"] = round(age, 2)
-        priority = classify_priority(value, programs)
-        if priority: value["priority_program"] = priority
         prepared.append(value)
     return deduplicate(prepared)
 
@@ -50,20 +48,12 @@ def collect(cfg):
     if scfg.get("enabled"):
         try: jobs.extend(simplify(scfg))
         except Exception as exc: errors.append(f"simplify: {exc}")
-    xcfg = cfg.get("sources", {}).get("x", {})
-    if xcfg.get("enabled"):
-        token = os.environ.get("X_BEARER_TOKEN")
-        if not token: errors.append("x: enabled but X_BEARER_TOKEN is missing")
-        else:
-            try: jobs.extend(x_recent(xcfg, token))
-            except Exception as exc: errors.append(f"x: {exc}")
     return jobs, errors
 
 def main():
     profile, cfg = load_yaml("resume_profile.yaml"), load_yaml("sources.yaml")
     if cfg.get("freshness_days"):
         profile.setdefault("scoring", {})["max_age_days"] = cfg["freshness_days"]
-    programs = load_yaml("priority_programs.yaml").get("programs", {})
     companies = load_yaml("companies.yaml").get("companies", {})
     store = StateStore(ROOT / "data" / "state.json")
     jobs, errors = collect(cfg)
@@ -80,7 +70,7 @@ def main():
     except Exception as exc:
         errors.append(f"enrich: {exc}")
 
-    jobs = prepare_jobs(jobs, programs)
+    jobs = prepare_jobs(jobs)
     ready = []
     for job in jobs:
         assessment = assess(job, profile, companies.get(job["company"])).as_dict()

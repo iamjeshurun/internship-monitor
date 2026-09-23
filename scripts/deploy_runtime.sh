@@ -19,12 +19,12 @@ for f in mac_agent.py dashboard.py tracker.py mail_sync.py notifier.py; do
 done
 # Behaviour config tracked with the code. Account routing and private answers
 # are never overwritten.
-for f in sources.yaml priority_programs.yaml resume_profile.yaml companies.yaml; do
+for f in sources.yaml resume_profile.yaml companies.yaml; do
   cp "$PROJECT_DIR/config/$f" "$RUNTIME/config/$f"
 done
 rm -rf "$RUNTIME"/src/__pycache__ "$RUNTIME"/mac/__pycache__
 
-# The poll / mail-sync / priority agents run the scripts fresh on every
+# The poll and mail-sync agents run the scripts fresh on every
 # StartInterval fire, so they pick up the synced code on their next run with no
 # reload. Only the long-lived dashboard (KeepAlive Flask) must be restarted.
 echo "Restarting dashboard"
@@ -34,7 +34,7 @@ launchctl kickstart -k "gui/$uid/com.jobmonitor.dashboard" 2>/dev/null \
        launchctl bootstrap "gui/$uid" "$HOME/Library/LaunchAgents/com.jobmonitor.dashboard.plist" 2>/dev/null || true; }
 
 # Optional: force an immediate run of the interval agents instead of waiting.
-for label in poll mail-sync priority; do
+for label in poll mail-sync; do
   launchctl kickstart "gui/$uid/com.jobmonitor.$label" 2>/dev/null || true
 done
 
