@@ -92,3 +92,18 @@ def test_receipt_with_assessment_link_and_deadline_is_assessment():
 def test_date_iso_is_attached_and_normalized():
     r = classify("Application received", "Thank you for applying.", "Acme", "Tuesday, September 8, 2026 at 3:43:31 PM")
     assert r["date_iso"] == "2026-09-08T15:43:31+00:00"
+
+
+def test_not_an_offer_disclaimer_in_receipt_is_not_an_offer():
+    body = ("Thank you for applying. Please note this is not an offer of employment. "
+            "Nothing in this message constitutes an offer or guarantee of employment.")
+    r = classify("Example Bank Careers: Thank you for applying", body, "Example Bank", "today")
+    assert r["stage"] == "applied"
+
+def test_does_not_constitute_offer_disclaimer_is_ignored():
+    r = classify("Thank you for applying to Acme", "This email does not constitute an offer of employment.", "Acme", "today")
+    assert r["stage"] == "applied"
+
+def test_real_offer_letter_is_still_an_offer():
+    r = classify("Your offer letter from Acme", "We are pleased to extend you an offer of employment as a Software Intern. Offer letter attached.", "Acme", "today")
+    assert r["stage"] == "offer"

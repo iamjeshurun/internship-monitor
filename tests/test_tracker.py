@@ -119,3 +119,18 @@ def test_vendor_masked_sender_does_not_fork_company_row():
     ]
     items = merge_tracker({"jobs":[]}, {"applications":events}, {})
     assert len(items) == 1
+
+
+def test_save_status_is_atomic(tmp_path):
+    import json
+    from unittest.mock import patch
+    from tracker import save_status
+    path = tmp_path / "status.json"
+    save_status(path, "a", "applied")
+    with patch("tracker.os.replace", side_effect=OSError("crash before rename")):
+        try:
+            save_status(path, "b", "dismissed")
+        except OSError:
+            pass
+    assert list(json.loads(path.read_text())) == ["a"]     # earlier statuses survive
+    assert not list(tmp_path.glob("*.tmp"))

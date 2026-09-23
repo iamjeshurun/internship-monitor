@@ -1,5 +1,5 @@
 from __future__ import annotations
-import hashlib, json, re
+import hashlib, json, os, re, tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -175,4 +175,21 @@ def _route_status_event(event: dict, items: dict) -> str:
     return application_key(event)
 
 def save_status(path: Path, key: str, status: str, source: str = "manual"):
-    state = load_json(path, {}); state[key] = {"status": status, "source": source, "updated_at": datetime.now(timezone.utc).isoformat()}; path.write_text(json.dumps(state, indent=2))
+    """Persist a manual status atomically. load_json() treats an unreadable file
+    as empty, so a torn write here would silently wipe every manual status."""
+    state = load_json(path, {})
+    state[key] = {"status": status, "source": source, "updated_at": datetime.now(timezone.utc).isoformat()}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as handle:
+            handle.write(json.dumps(state, indent=2))
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise

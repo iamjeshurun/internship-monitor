@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import re
+import time
+from email.utils import parsedate_to_datetime
 from html import unescape
 from urllib.parse import urljoin
 
@@ -16,10 +18,53 @@ SESSION = requests.Session()
 SESSION.headers.update({"User-Agent": "internship-job-monitor/2.0 (+personal job search)"})
 
 
-def _get_json(url: str, timeout: int = 25):
-    response = SESSION.get(url, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
+RETRY_STATUSES = {429, 500, 502, 503, 504}
+MAX_ATTEMPTS = 3
+BACKOFF_BASE = 1.0        # seconds; doubles each attempt
+MAX_RETRY_WAIT = 20.0     # never sleep longer than this, even if Retry-After says so
+
+
+def _retry_wait(response, attempt: int) -> float:
+    """Honor Retry-After (seconds or HTTP date), else exponential backoff; capped."""
+    header = (getattr(response, "headers", None) or {}).get("Retry-After")
+    wait = None
+    if header:
+        try:
+            wait = float(header)
+        except ValueError:
+            try:
+                wait = max(0.0, parsedate_to_datetime(header).timestamp() - time.time())
+            except (TypeError, ValueError):
+                wait = None
+    if wait is None:
+        wait = BACKOFF_BASE * (2 ** attempt)
+    return min(wait, MAX_RETRY_WAIT)
+
+
+def _get(url: str, timeout: int = 25, attempts: int = MAX_ATTEMPTS, **kwargs):
+    """GET with bounded retry on transient failures (timeouts, connection errors,
+    429/5xx). A source that still fails after MAX_ATTEMPTS raises, and collect()
+    isolates that failure to the one source."""
+    last_exc = None
+    for attempt in range(attempts):
+        try:
+            response = SESSION.get(url, timeout=timeout, **kwargs)
+        except (requests.Timeout, requests.ConnectionError) as exc:
+            last_exc = exc
+            if attempt < attempts - 1:
+                time.sleep(min(BACKOFF_BASE * (2 ** attempt), MAX_RETRY_WAIT))
+                continue
+            raise
+        if response.status_code in RETRY_STATUSES and attempt < attempts - 1:
+            time.sleep(_retry_wait(response, attempt))
+            continue
+        response.raise_for_status()
+        return response
+    raise last_exc  # pragma: no cover
+
+
+def _get_json(url: str, timeout: int = 25, attempts: int = MAX_ATTEMPTS):
+    return _get(url, timeout=timeout, attempts=attempts).json()
 
 
 def greenhouse(company: str, token: str) -> list[Job]:
@@ -39,8 +84,7 @@ def ashby(company: str, board: str) -> list[Job]:
 
 def simplify(config: dict) -> list[Job]:
     repo, branch = config["repo"], config.get("branch", "dev")
-    response = SESSION.get(f"https://raw.githubusercontent.com/{repo}/{branch}/README.md", timeout=30)
-    response.raise_for_status()
+    response = _get(f"https://raw.githubusercontent.com/{repo}/{branch}/README.md", timeout=30)
     categories = [x.lower() for x in config.get("categories", [])]
     jobs = []
     for row in parse_readme(response.text):
@@ -55,8 +99,7 @@ def x_recent(config: dict, bearer_token: str) -> list[Job]:
     accounts = [f"from:{a}" for a in config.get("watched_accounts", [])]
     if accounts:
         query = f"({query}) OR ({' OR '.join(accounts)})"
-    response = SESSION.get("https://api.x.com/2/tweets/search/recent", headers={"Authorization": f"Bearer {bearer_token}"}, params={"query": query, "max_results": 100, "tweet.fields": "created_at,author_id,entities"}, timeout=30)
-    response.raise_for_status()
+    response = _get("https://api.x.com/2/tweets/search/recent", timeout=30, headers={"Authorization": f"Bearer {bearer_token}"}, params={"query": query, "max_results": 100, "tweet.fields": "created_at,author_id,entities"})
     jobs = []
     for post in response.json().get("data", []):
         text = post.get("text", "")
@@ -84,14 +127,14 @@ def _fetch_description(url: str) -> str:
         if "greenhouse.io" in url:
             token = m.group(1) or m.group(3)
             job_id = m.group(2) or m.group(4)
-            data = _get_json(f"https://boards-api.greenhouse.io/v1/boards/{token}/jobs/{job_id}", timeout=12)
+            data = _get_json(f"https://boards-api.greenhouse.io/v1/boards/{token}/jobs/{job_id}", timeout=12, attempts=1)
             return unescape(data.get("content", ""))
         if "lever.co" in url:
-            data = _get_json(f"https://api.lever.co/v0/postings/{m.group(5)}/{m.group(6)}", timeout=12)
+            data = _get_json(f"https://api.lever.co/v0/postings/{m.group(5)}/{m.group(6)}", timeout=12, attempts=1)
             return BeautifulSoup(data.get("descriptionPlain") or data.get("description", ""), "html.parser").get_text(" ")
         if "ashbyhq.com" in url:
             board = m.group(7)
-            data = _get_json(f"https://api.ashbyhq.com/posting-api/job-board/{board}?includeCompensation=true", timeout=12)
+            data = _get_json(f"https://api.ashbyhq.com/posting-api/job-board/{board}?includeCompensation=true", timeout=12, attempts=1)
             for posting in data.get("jobs", []):
                 if m.group(8) in (posting.get("jobUrl", "") + posting.get("applyUrl", "")):
                     return BeautifulSoup(posting.get("descriptionHtml", ""), "html.parser").get_text(" ")
@@ -115,8 +158,7 @@ def enrich_descriptions(jobs: list[Job], should_fetch, limit: int = 40) -> None:
 
 
 def custom_jsonld(company: str, page_url: str) -> list[Job]:
-    response = SESSION.get(page_url, timeout=30)
-    response.raise_for_status()
+    response = _get(page_url, timeout=30)
     soup = BeautifulSoup(response.text, "lxml")
     jobs = []
     for script in soup.select('script[type="application/ld+json"]'):

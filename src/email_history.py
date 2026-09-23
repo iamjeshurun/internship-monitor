@@ -95,6 +95,12 @@ NON_STATUS_BOILERPLATE = [
     re.compile(r"means the position is either no longer open,\s*you withdrew from consideration,\s*or you were not selected for the role", re.I),
     re.compile(r"you (?:may|might|could)[^.\n]{0,80}(?:assessment|challenge|test|hackerrank|codesignal|invitation)", re.I),
     re.compile(r"(?:trusted platforms?|our vendors?|partners? such as)[^.\n]{0,120}", re.I),
+    # Legal disclaimers: "this is not an offer of employment", "does not
+    # constitute/guarantee an offer/interview", "no offer is implied".
+    re.compile(r"\b(?:is|are|was|were|be|does|do|did|shall|will|should|can|cannot|could)\s+not\b[^.\n]{0,60}\b(?:an?\s+)?(?:offer|guarantee|promise|commitment|contract)\b[^.\n]{0,60}", re.I),
+    re.compile(r"\b(?:not|no|never|neither|nor|without)\b[^.\n]{0,40}\boffers?\b[^.\n]{0,60}", re.I),
+    re.compile(r"\b(?:nothing|none)\b[^.\n]{0,60}\b(?:constitutes?|creates?|implies|guarantees?)\b[^.\n]{0,60}\b(?:offer|employment|contract)\b[^.\n]{0,40}", re.I),
+    re.compile(r"\bconstitutes?\b[^.\n]{0,30}\b(?:an?\s+)?offer\b[^.\n]{0,60}", re.I),
 ]
 _CONDITIONAL_SENTENCE = re.compile(
     r"^\s*(?:if|should|in the event|please note that if|were you|unless)\b|"

@@ -89,14 +89,43 @@ def dedupe_key(job: dict) -> str:
     ))
 
 
-def deduplicate(jobs: list[dict]) -> list[dict]:
-    chosen: dict[str, dict] = {}
-    for job in jobs:
-        key = dedupe_key(job)
-        current = chosen.get(key)
-        rank = (bool((job.get("priority_program") or {}).get("official_source")), job.get("source") in DIRECT_SOURCES, bool(job.get("description")))
-        current_rank = (bool(((current or {}).get("priority_program") or {}).get("official_source")), (current or {}).get("source") in DIRECT_SOURCES, bool((current or {}).get("description")))
-        if current is None or rank > current_rank:
-            chosen[key] = job
-    return list(chosen.values())
+def _is_direct(job: dict) -> bool:
+    return job.get("source") in DIRECT_SOURCES or bool((job.get("priority_program") or {}).get("official_source"))
 
+
+def _rank(job: dict) -> tuple:
+    return (bool((job.get("priority_program") or {}).get("official_source")), job.get("source") in DIRECT_SOURCES, bool(job.get("description")))
+
+
+def _identity(job: dict) -> str:
+    """What makes two listings the *same posting*: same source + requisition/ID,
+    else the canonical-URL key. Same company/title/location alone is NOT enough —
+    an employer often opens several distinct requisitions with identical titles."""
+    if job.get("source_id") and job.get("source"):
+        return f"{job['source']}|{job['source_id']}"
+    return job.get("key") or job.get("url", "")
+
+
+def deduplicate(jobs: list[dict]) -> list[dict]:
+    """Collapse aggregator copies into the official listing without ever merging
+    two distinct official requisitions.
+
+    Within a role/program+location group: every distinct official (direct-source)
+    posting survives; aggregator copies are dropped when an official posting
+    exists, otherwise kept when their URLs are distinct.
+    """
+    groups: dict[str, list[dict]] = {}
+    for job in jobs:
+        groups.setdefault(dedupe_key(job), []).append(job)
+
+    out: list[dict] = []
+    for group in groups.values():
+        direct = [j for j in group if _is_direct(j)]
+        pool = direct or group
+        best: dict[str, dict] = {}
+        for job in pool:
+            ident = _identity(job)
+            if ident not in best or _rank(job) > _rank(best[ident]):
+                best[ident] = job
+        out.extend(best.values())
+    return out

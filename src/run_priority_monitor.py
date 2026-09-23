@@ -9,6 +9,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from notifications import send_digest
 from run_monitor import collect, load_yaml, prepare_jobs
 from scoring import assess
+from sources import _fetch_description
 from state import StateStore
 
 
@@ -27,6 +28,11 @@ def main():
     }
     collected, errors = collect(focused)
     jobs = [job for job in prepare_jobs(collected, programs) if job.get("priority_program")]
+    # Priority matches are few, so fetch each one's real JD (sponsorship / grad-year
+    # screening is otherwise blind for aggregator listings).
+    for job in jobs:
+        if not job.get("description"):
+            job["description"] = _fetch_description(job.get("url", ""))
     store = StateStore(ROOT / "data" / "priority_state.json")
     ready = []
     for job in jobs:
