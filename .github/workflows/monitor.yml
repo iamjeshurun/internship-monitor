@@ -1,7 +1,12 @@
 name: Job Monitor
+# Public edition: manual-only. A scheduled run here would post job matches to a
+# public issue and commit state into a public repo. To run your own private
+# instance, keep the repository private and restore a schedule, e.g.:
+#   schedule:
+#     - cron: "7 */2 * * *"
+# Alerts and state persistence are opt-in via repository variables
+# (ENABLE_ALERTS, PERSIST_STATE = "true").
 on:
-  schedule:
-    - cron: "7 */2 * * *"
   workflow_dispatch: {}
 permissions:
   contents: write
@@ -24,14 +29,15 @@ jobs:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ vars.ENABLE_ALERTS == 'true' && secrets.GITHUB_TOKEN || '' }}
           GITHUB_ALERT_MENTION: ${{ github.repository_owner }}
         run: python src/run_monitor.py
       - name: Persist durable state and queue
+        if: vars.PERSIST_STATE == 'true'
         run: |
           git config user.name job-monitor-bot
           git config user.email actions@github.com
-          git add data/state.json data/review_queue.json
+          git add -f data/state.json data/review_queue.json
           git diff --staged --quiet && exit 0
           git commit -m "Update job monitor state [skip ci]"
           git pull --rebase origin "$GITHUB_REF_NAME"

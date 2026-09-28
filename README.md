@@ -83,7 +83,7 @@ postings.
 4. Confirm `data/state.json` and `data/review_queue.json` update.
 5. Subscribe to the private `Job Monitor Alerts` issue. In GitHub notification settings, enable **Email** and **On GitHub** for **Participating and @mentions** and select a verified destination email.
 
-The cloud monitor runs every two hours, uses a concurrency lock, and commits only durable state files. Tests run on code changes, not every polling cycle.
+In the private deployment the cloud monitor runs every two hours, uses a concurrency lock, and commits only durable state files. In this public edition the workflow is **manual-only**: keep your own copy private, restore the `schedule:` trigger, and set the repository variables `ENABLE_ALERTS` and `PERSIST_STATE` to `true` to enable issue alerts and state commits. Tests run on code changes, not every polling cycle.
 
 ## MacBook notification setup
 
