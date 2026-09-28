@@ -130,3 +130,7 @@ The generated packet separates safe saved answers from questions requiring revie
 ### Optional live-browser autofill
 
 `safari/job-monitor-autofill.user.js` runs through the lightweight Userscripts app; Xcode is not required. Save only basic identity fields, then click **Review Autofill** while reviewing an application. Teal fields were filled automatically; orange fields require review. It has no submit capability and stores its small identity profile only in the userscript manager. Do not place passwords, government identifiers, or demographic answers in it.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
