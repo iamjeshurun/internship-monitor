@@ -2,13 +2,13 @@
 
 A human-in-the-loop internship discovery and application-tracking system: a cloud pipeline that finds and scores postings, plus local macOS services that reconcile application status from your mailbox and notify you. **It never submits an application on your behalf.**
 
-> **Public edition.** This is a sanitized copy of a private working repository. Personal configuration, runtime data, and account details were removed from every commit (see [docs/ENGINEERING_LOG.md](docs/ENGINEERING_LOG.md#sanitization)); example configs use fictional values. Copy `config/*.example.yaml` and adapt them.
+> **Code here, personal data elsewhere.** This repository holds all of the code. A real deployment keeps its personal configuration and job history in a separate private repository and runs this code against it (see [Running a private instance](#running-a-private-instance)). Example configs use fictional values; copy `config/*.example.yaml` and adapt them.
 
 **Quick look (no credentials needed):**
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
-pytest -q                 # 98 tests, incl. fault-injection cases
+pytest -q                 # 109 tests, incl. fault-injection cases
 python src/run_monitor.py # polls public boards, scores, writes data/ (notifications skipped without secrets)
 ```
 
@@ -35,6 +35,7 @@ Cloud discovery on GitHub Actions, native review notifications on macOS, and hum
 5. The always-on local dashboard at `http://127.0.0.1:8765` replaces the spreadsheet tracker and supports ready, reviewing, applied, assessment, interview, offer, rejected, and dismissed states.
 6. `prep_application.py` creates a safe review packet; it never submits.
 7. A 15-minute local Apple Mail sync updates tracker stages from Gmail and Outlook/Exchange metadata without retaining message bodies.
+8. Optional: a 10-minute local watcher flags named early-career programs (`config/priority_programs.yaml`, e.g. Google STEP) and a daily report (`src/daily_report.py`) summarizes the last 24 hours.
 
 ## Quick local test
 
@@ -75,7 +76,7 @@ postings.
 ## GitHub deployment
 
 1. Create a **private** repository and push this directory.
-2. Optional fallback-email and X integrations use Actions secrets:
+2. Optional fallback email uses Actions secrets:
    - `SMTP_USER`
    - `SMTP_PASSWORD` (an app password, never the real password)
    - `NOTIFY_EMAIL`
@@ -83,7 +84,33 @@ postings.
 4. Confirm `data/state.json` and `data/review_queue.json` update.
 5. Subscribe to the private `Job Monitor Alerts` issue. In GitHub notification settings, enable **Email** and **On GitHub** for **Participating and @mentions** and select a verified destination email.
 
-In the private deployment the cloud monitor runs every two hours, uses a concurrency lock, and commits only durable state files. In this public edition the workflow is **manual-only**: keep your own copy private, restore the `schedule:` trigger, and set the repository variables `ENABLE_ALERTS` and `PERSIST_STATE` to `true` to enable issue alerts and state commits. Tests run on code changes, not every polling cycle.
+In this repository the workflow is **manual-only**, so it never posts job matches to a public issue or commits state into a public repository. For scheduled runs, use a private instance (below).
+
+## Running a private instance
+
+Keep personal configuration and job history out of this repository. A private repository needs only:
+
+```
+config/   accounts.yaml, resume_profile.yaml, sources.yaml, companies.yaml, priority_programs.yaml
+data/     review_queue.json, priority_queue.json (read by the Mac agent)
+.github/workflows/   scheduled jobs that check out this repository and run it
+```
+
+Every entry point reads `JOB_MONITOR_CONFIG_DIR` and `JOB_MONITOR_DATA_DIR` (defaulting to this repository's `config/` and `data/`), so a private workflow runs the public code against private files:
+
+```yaml
+steps:
+  - uses: actions/checkout@v7                 # the private repo: config + data
+  - uses: actions/checkout@v7
+    with: {repository: iamjeshurun/internship-monitor, path: app}
+  - run: pip install -r app/requirements.txt
+  - run: python app/src/run_monitor.py
+    env:
+      JOB_MONITOR_CONFIG_DIR: ${{ github.workspace }}/config
+      JOB_MONITOR_DATA_DIR: ${{ github.workspace }}/data
+```
+
+To deploy to a Mac with private config, pass its folder to the scripts below with `JOB_MONITOR_CONFIG_SOURCE=/path/to/private-repo/config`.
 
 ## MacBook notification setup
 
@@ -106,7 +133,7 @@ required. After granting Automation access, scan each account locally:
 python src/email_history.py --provider apple-mail --account your-address@example.com
 ```
 
-The importer records inferred company, stage, date, requisition ID, and confidence. It intentionally does not store full message bodies. The installed Mac mailbox service performs this scan every 15 minutes across all accounts in `JOB_MONITOR_MAIL_ACCOUNTS` (comma-separated addresses as configured in Mail.app; required — there is no default). Each run scans a short rolling window (`JOB_MONITOR_MAIL_DAYS`, default 21) of the **Inbox and Archive only** — never Gmail's "All Mail", which cannot be scanned within any timeout — using one compound Mail query per mailbox; prior events are merged forward for ~365 days so history is not lost. Per-account scan health is written to `mail_health.json` and surfaced on the dashboard. OAuth application registration and refresh-token custody must be completed for a non-Apple-Mail connection; do not place tokens in GitHub.
+The importer records inferred company, stage, date, requisition ID, and confidence. It intentionally does not store full message bodies. The installed Mac mailbox service performs this scan every 15 minutes across all accounts in `JOB_MONITOR_MAIL_ACCOUNTS` (comma-separated addresses as configured in Mail.app), or, if that is unset, `application_history.mail_accounts` in `config/accounts.yaml`. There is no default. Each run scans a short rolling window (`JOB_MONITOR_MAIL_DAYS`, default 21) of the **Inbox and Archive only** — never Gmail's "All Mail", which cannot be scanned within any timeout — using one compound Mail query per mailbox; prior events are merged forward for ~365 days so history is not lost. Per-account scan health is written to `mail_health.json` and surfaced on the dashboard. OAuth application registration and refresh-token custody must be completed for a non-Apple-Mail connection; do not place tokens in GitHub.
 
 ### Redeploying code to the running Mac
 
@@ -114,7 +141,7 @@ The importer records inferred company, stage, date, requisition ID, and confiden
 zsh scripts/deploy_runtime.sh
 ```
 
-Syncs `src/`, the Mac scripts, and behaviour config into `~/Library/Application Support/JobMonitor/runtime` and restarts the dashboard. Account routing (`accounts.yaml`) and private answers are never overwritten. Run `mac/install.sh` instead when dependencies or the LaunchAgent plists change.
+Syncs `src/`, the Mac scripts, and behaviour config into `~/Library/Application Support/JobMonitor/runtime` and restarts the dashboard. With `JOB_MONITOR_CONFIG_SOURCE=/path/to/private-repo/config`, config (including `accounts.yaml`) comes from the private repository; without it, account routing is never overwritten. Run `mac/install.sh` instead when dependencies or the LaunchAgent plists change.
 
 ## Application preparation
 

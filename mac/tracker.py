@@ -1,25 +1,127 @@
 from __future__ import annotations
-import hashlib, json, os, re, tempfile
+
+import hashlib
+import json
+import os
+import re
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-STAGE_ORDER = {"ready": 0, "reviewing": 1, "applied": 2, "assessment": 3, "interview": 4, "offer": 5, "rejected": 5, "dismissed": 6}
-STOP = {"job", "application", "intern", "internship", "the", "and", "for", "at", "you", "your", "from", "team"}
-GENERIC_ROLE = {"thank", "thanks", "interest", "received", "submitted", "invitation", "assessment", "assessments", "process", "prepare", "track", "important", "information", "successfully", "applied", "update", "reminder", "action", "required", "complete", "completed", "completing", "next", "step", "steps", "take", "status"}
-GENERIC_COMPANY = {"capital", "company", "corp", "corporation", "group", "holdings", "inc", "llc", "careers", "recruiting", "talent", "trading", "assessments", "assessment", "hiring", "jobs", "team", "global", "technologies", "labs", "no", "reply", "noreply"}
+STAGE_ORDER = {
+    "ready": 0,
+    "reviewing": 1,
+    "applied": 2,
+    "assessment": 3,
+    "interview": 4,
+    "offer": 5,
+    "rejected": 5,
+    "dismissed": 6,
+}
+STOP = {
+    "job",
+    "application",
+    "intern",
+    "internship",
+    "the",
+    "and",
+    "for",
+    "at",
+    "you",
+    "your",
+    "from",
+    "team",
+}
+GENERIC_ROLE = {
+    "thank",
+    "thanks",
+    "interest",
+    "received",
+    "submitted",
+    "invitation",
+    "assessment",
+    "assessments",
+    "process",
+    "prepare",
+    "track",
+    "important",
+    "information",
+    "successfully",
+    "applied",
+    "update",
+    "reminder",
+    "action",
+    "required",
+    "complete",
+    "completed",
+    "completing",
+    "next",
+    "step",
+    "steps",
+    "take",
+    "status",
+}
+GENERIC_COMPANY = {
+    "capital",
+    "company",
+    "corp",
+    "corporation",
+    "group",
+    "holdings",
+    "inc",
+    "llc",
+    "careers",
+    "recruiting",
+    "talent",
+    "trading",
+    "assessments",
+    "assessment",
+    "hiring",
+    "jobs",
+    "team",
+    "global",
+    "technologies",
+    "labs",
+    "no",
+    "reply",
+    "noreply",
+}
 # ATS / assessment vendors that mask the real employer in the sender line.
-ATS_VENDORS = {"greenhouse", "workday", "myworkday", "ashby", "ashbyhq", "lever", "icims", "smartrecruiters", "jobvite", "successfactors", "shl", "hackerrank", "codesignal", "criteria", "hirevue", "modernhire"}
+ATS_VENDORS = {
+    "greenhouse",
+    "workday",
+    "myworkday",
+    "ashby",
+    "ashbyhq",
+    "lever",
+    "icims",
+    "smartrecruiters",
+    "jobvite",
+    "successfactors",
+    "shl",
+    "hackerrank",
+    "codesignal",
+    "criteria",
+    "hirevue",
+    "modernhire",
+}
+
 
 def load_json(path: Path, fallback):
-    try: return json.loads(path.read_text())
-    except (FileNotFoundError, json.JSONDecodeError): return fallback
+    try:
+        return json.loads(path.read_text())
+    except (FileNotFoundError, json.JSONDecodeError):
+        return fallback
+
 
 def tokens(value: str) -> set[str]:
     return {x for x in re.findall(r"[a-z0-9]+", (value or "").lower()) if len(x) > 2 and x not in STOP}
 
+
 def event_key(event: dict) -> str:
     raw = "\x1f".join(str(event.get(k, "")) for k in ("mailbox_account", "date", "subject"))
     return "email-" + hashlib.sha256(raw.encode()).hexdigest()[:20]
+
 
 def company_tokens(value: str) -> set[str]:
     """Tokens that identify an employer, minus ATS vendors and generic suffixes.
@@ -36,7 +138,9 @@ def _event_day(event: dict) -> str:
 
 def _company_slug(event: dict) -> str:
     ctoks = company_tokens(event.get("company_hint", ""))
-    return "-".join(sorted(ctoks)) or re.sub(r"[^a-z0-9]+", "-", event.get("company_hint", "").lower()).strip("-")
+    return "-".join(sorted(ctoks)) or re.sub(r"[^a-z0-9]+", "-", event.get("company_hint", "").lower()).strip(
+        "-"
+    )
 
 
 def application_key(event: dict) -> str:
@@ -55,14 +159,22 @@ def application_key(event: dict) -> str:
         return "application-" + hashlib.sha256(raw.encode()).hexdigest()[:20]
     return event_key(event)
 
+
 def match_event(event: dict, jobs: list[dict]) -> dict | None:
     req = str(event.get("requisition_id") or "").lower()
     if req:
-        exact = next((j for j in jobs if req in " ".join(str(j.get(k, "")).lower() for k in ("external_id", "url", "title"))), None)
+        exact = next(
+            (
+                j
+                for j in jobs
+                if req in " ".join(str(j.get(k, "")).lower() for k in ("external_id", "url", "title"))
+            ),
+            None,
+        )
         if exact:
             return exact
     event_company = company_tokens(event.get("company_hint", ""))
-    event_tokens = tokens(f"{event.get('subject','')} {event.get('company_hint','')}")
+    event_tokens = tokens(f"{event.get('subject', '')} {event.get('company_hint', '')}")
     ranked = []
     for job in jobs:
         company = company_tokens(job.get("company", ""))
@@ -91,6 +203,7 @@ def match_event(event: dict, jobs: list[dict]) -> dict | None:
         return None
     return best_job
 
+
 def _sort_ts(event: dict) -> str:
     return str(event.get("date_iso") or event.get("date") or "")
 
@@ -110,7 +223,11 @@ def _apply_event(item: dict, event: dict, statuses: dict):
     manual = _manual_status(statuses.get(item["key"]))
     if not manual or manual in {"ready", "reviewing"}:
         cur = item.get("_status_ts")
-        if cur is None or ts > cur or (ts == cur and STAGE_ORDER.get(stage, 0) > STAGE_ORDER.get(item["status"], 0)):
+        if (
+            cur is None
+            or ts > cur
+            or (ts == cur and STAGE_ORDER.get(stage, 0) > STAGE_ORDER.get(item["status"], 0))
+        ):
             item["status"], item["status_source"], item["_status_ts"] = stage, "email", ts
     item.setdefault("events", []).append(event)
     if ts > item.get("last_update", ""):
@@ -133,7 +250,9 @@ def merge_tracker(queue: dict, history: dict, statuses: dict) -> list[dict]:
         matched = match_event(event, jobs)
         if matched:
             key = matched["key"]
-        elif event.get("requisition_id") or (tokens(event.get("role_hint", "")) - company_tokens(event.get("company_hint", "")) - GENERIC_ROLE):
+        elif event.get("requisition_id") or (
+            tokens(event.get("role_hint", "")) - company_tokens(event.get("company_hint", "")) - GENERIC_ROLE
+        ):
             key = application_key(event)  # has a distinguishing role or req id
         elif event.get("stage", "applied") != "applied":
             # Role-less status update (rejection / assessment / interview): route
@@ -144,15 +263,23 @@ def merge_tracker(queue: dict, history: dict, statuses: dict) -> list[dict]:
             key = application_key(event)  # role-less receipt -> day-bucketed row
 
         if key not in items:
-            items[key] = {"key": key, "company": event.get("company_hint") or "Email-detected application",
-                          "title": event.get("role_hint") or event.get("subject") or "Application update",
-                          "location": "", "url": "", "assessment": {"score": "—", "reasons": [], "flags": []},
-                          "status": "applied", "status_source": "email"}
+            items[key] = {
+                "key": key,
+                "company": event.get("company_hint") or "Email-detected application",
+                "title": event.get("role_hint") or event.get("subject") or "Application update",
+                "location": "",
+                "url": "",
+                "assessment": {"score": "—", "reasons": [], "flags": []},
+                "status": "applied",
+                "status_source": "email",
+            }
         _apply_event(items[key], event, statuses)
 
-    ordered = sorted(items.values(),
-                     key=lambda i: (STAGE_ORDER.get(i.get("status", "ready"), 0), i.get("last_update", "")),
-                     reverse=True)
+    ordered = sorted(
+        items.values(),
+        key=lambda i: (STAGE_ORDER.get(i.get("status", "ready"), 0), i.get("last_update", "")),
+        reverse=True,
+    )
     for item in ordered:
         item.pop("_status_ts", None)
         display = item.pop("last_update_display", None)
@@ -165,14 +292,17 @@ def _route_status_event(event: dict, items: dict) -> str:
     slug = _company_slug(event)
     ts = _sort_ts(event)
     candidates = [
-        (i.get("last_update", ""), key) for key, i in items.items()
-        if slug and slug == "-".join(sorted(company_tokens(i.get("company", ""))))
+        (i.get("last_update", ""), key)
+        for key, i in items.items()
+        if slug
+        and slug == "-".join(sorted(company_tokens(i.get("company", ""))))
         and i.get("status_source") in {"email", "queue", "manual"}
     ]
     earlier = [c for c in candidates if c[0] <= ts] or candidates
     if earlier:
         return max(earlier)[1]
     return application_key(event)
+
 
 def save_status(path: Path, key: str, status: str, source: str = "manual"):
     """Persist a manual status atomically. load_json() treats an unreadable file

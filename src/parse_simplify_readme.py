@@ -16,10 +16,13 @@ The README uses raw HTML tables (not markdown pipe tables) inside each
 category section. This parser handles that format directly with
 BeautifulSoup rather than assuming a stable JSON export exists.
 """
+
 from __future__ import annotations
-from dataclasses import dataclass, asdict
-from bs4 import BeautifulSoup
+
 import re
+from dataclasses import dataclass
+
+from bs4 import BeautifulSoup
 
 
 @dataclass
@@ -36,7 +39,7 @@ class Listing:
         return self.url
 
 
-CATEGORY_HEADING_PATTERN = re.compile(r'^##\s+.*?\s+(.+?Internship Roles)\s*$', re.MULTILINE)
+CATEGORY_HEADING_PATTERN = re.compile(r"^##\s+.*?\s+(.+?Internship Roles)\s*$", re.MULTILINE)
 
 
 def parse_readme(markdown_text: str) -> list[Listing]:
@@ -49,14 +52,14 @@ def parse_readme(markdown_text: str) -> list[Listing]:
     listings: list[Listing] = []
 
     # Split the doc at each "## <emoji> <Category> Internship Roles" heading.
-    sections = re.split(r'(^##\s+.+Internship Roles\s*$)', markdown_text, flags=re.MULTILINE)
+    sections = re.split(r"(^##\s+.+Internship Roles\s*$)", markdown_text, flags=re.MULTILINE)
     # sections looks like: [preamble, heading1, body1, heading2, body2, ...]
 
     for i in range(1, len(sections) - 1, 2):
         heading = sections[i]
         body = sections[i + 1]
-        category_match = re.search(r'([A-Za-z ,&]+Internship Roles)', heading)
-        category = category_match.group(1).strip() if category_match else heading.strip('# \n')
+        category_match = re.search(r"([A-Za-z ,&]+Internship Roles)", heading)
+        category = category_match.group(1).strip() if category_match else heading.strip("# \n")
 
         soup = BeautifulSoup(body, "lxml")
         table = soup.find("table")
@@ -99,17 +102,23 @@ def parse_readme(markdown_text: str) -> list[Listing]:
             if not company or not role or not url:
                 continue
 
-            listings.append(Listing(
-                category=category, company=company, role=role,
-                location=location, url=url, age_raw=age_raw,
-            ))
+            listings.append(
+                Listing(
+                    category=category,
+                    company=company,
+                    role=role,
+                    location=location,
+                    url=url,
+                    age_raw=age_raw,
+                )
+            )
 
     return listings
 
 
 def age_to_hours(age_raw: str) -> float:
     """Convert '0d', '1d', '5h', '30m' style ages to hours (rough, for freshness filtering)."""
-    m = re.match(r'(\d+)([dhm])', age_raw.strip())
+    m = re.match(r"(\d+)([dhm])", age_raw.strip())
     if not m:
         return 9999
     n, unit = int(m.group(1)), m.group(2)
@@ -118,10 +127,13 @@ def age_to_hours(age_raw: str) -> float:
 
 if __name__ == "__main__":
     import sys
+
     with open(sys.argv[1] if len(sys.argv) > 1 else "tests/fixtures/sample_readme.md") as f:
         text = f.read()
     listings = parse_readme(text)
     print(f"Parsed {len(listings)} listings")
-    for l in listings[:10]:
-        print(f"  [{l.category}] {l.company} - {l.role} ({l.location}) age={l.age_raw}")
-        print(f"    {l.url}")
+    for listing in listings[:10]:
+        print(
+            f"  [{listing.category}] {listing.company} - {listing.role} ({listing.location}) age={listing.age_raw}"
+        )
+        print(f"    {listing.url}")

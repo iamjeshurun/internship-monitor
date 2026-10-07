@@ -1,0 +1,66 @@
+programs:
+  google_step:
+    name: Google STEP
+    companies: [Google]
+    aliases:
+      - "\\bstep\\b.*\\b(intern|internship)\\b"
+      - "student training in engineering program"
+    official_domains: [google.com]
+  microsoft_explore:
+    name: Microsoft Explore
+    companies: [Microsoft]
+    aliases:
+      - "\\bexplore\\b.*\\b(intern|internship)\\b"
+      - "explore microsoft"
+    official_domains: [microsoft.com]
+  meta_university:
+    name: Meta University
+    companies: [Meta, Facebook]
+    aliases:
+      - "meta university"
+      - "facebook university"
+    official_domains: [metacareers.com, facebookcareers.com]
+  uberstar:
+    name: UberSTAR
+    companies: [Uber]
+    aliases:
+      - "uber[ -]?star"
+      - "software engineering internship.*uberstar"
+    official_domains: [uber.com]
+  nvidia_ignite:
+    name: NVIDIA Ignite
+    companies: [NVIDIA]
+    aliases:
+      - "nvidia ignite"
+      - "ignite internship"
+    official_domains: [nvidia.com]
+  amazon_future_engineer:
+    name: Amazon Future Engineer
+    companies: [Amazon]
+    aliases:
+      - "amazon future engineer"
+      - "future engineer.*intern"
+    official_domains: [amazon.jobs]
+  two_sigma_freshman:
+    name: Two Sigma Early-Career Internship
+    companies: [Two Sigma]
+    aliases:
+      - "\\bfreshm(an|en)\\b.{0,40}\\bintern"
+      - "\\bfirst[\\s-]year\\b.{0,40}\\bintern"
+      - "\\bearly[\\s-]career\\b.{0,40}\\bintern"
+    official_domains: [twosigma.com]
+  palantir_launch:
+    name: Palantir Launch
+    companies: [Palantir]
+    aliases:
+      - "palantir launch"
+      - "launch.*(intern|program)"
+    official_domains: [palantir.com]
+
+# Add only verified provider identifiers here. The ten-minute watcher fetches
+# these boards plus the configured discovery feed; guessed identifiers are not used.
+boards:
+  greenhouse: {}
+  lever: {}
+  ashby: {}
+  custom_pages: {}

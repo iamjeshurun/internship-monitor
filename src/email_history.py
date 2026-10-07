@@ -1,5 +1,10 @@
 from __future__ import annotations
-import argparse, json, os, re, subprocess
+
+import argparse
+import json
+import os
+import re
+import subprocess
 from email.utils import parseaddr
 from pathlib import Path
 
@@ -48,7 +53,10 @@ DECISION_CONTEXT = re.compile(
     re.I,
 )
 
-OFFER = re.compile(r"offer of employment|pleased to (?:extend|offer)|(?:internship|employment|formal) offer|offer letter", re.I)
+OFFER = re.compile(
+    r"offer of employment|pleased to (?:extend|offer)|(?:internship|employment|formal) offer|offer letter",
+    re.I,
+)
 INTERVIEW = re.compile(
     r"interview invitation|invit(?:e|ed|ation)[^.\n]{0,40}interview|would like to (?:interview|schedule)|"
     r"schedule (?:a|your|an) (?:interview|call|conversation|chat)|next step[^.\n]{0,50}interview|"
@@ -69,7 +77,10 @@ ASSESSMENT = re.compile(
 # "Hard" evidence — a concrete next step aimed at the candidate right now, not a
 # description of the process. Used to allow a stage advance when the SUBJECT is a
 # plain application receipt (which otherwise stays "applied").
-OFFER_HARD = re.compile(r"offer of employment|offer letter|pleased to (?:extend|offer) you|your offer (?:details|is attached)", re.I)
+OFFER_HARD = re.compile(
+    r"offer of employment|offer letter|pleased to (?:extend|offer) you|your offer (?:details|is attached)",
+    re.I,
+)
 INTERVIEW_HARD = re.compile(
     r"interview (?:invitation|is (?:scheduled|confirmed)|request)|invit(?:e|ed|ation)[^.\n]{0,30}(?:to )?interview|"
     r"schedule your interview|book (?:a|your) (?:time|interview)|your interview (?:with|on|is)|"
@@ -85,19 +96,42 @@ ASSESSMENT_HARD = re.compile(
     re.I,
 )
 
-GENERIC_SENDERS = {"greenhouse", "workday", "ashby", "lever", "icims", "smartrecruiters", "jobvite", "successfactors", "no reply", "noreply"}
+GENERIC_SENDERS = {
+    "greenhouse",
+    "workday",
+    "ashby",
+    "lever",
+    "icims",
+    "smartrecruiters",
+    "jobvite",
+    "successfactors",
+    "no reply",
+    "noreply",
+}
 
 # Sentences that describe hypotheticals, definitions, or vendor lists rather than
 # the outcome of THIS message. Dropped before stage detection.
 NON_STATUS_BOILERPLATE = [
-    re.compile(r"means the position is either no longer open,\s*you withdrew from consideration,\s*or you were not selected for the role", re.I),
-    re.compile(r"you (?:may|might|could)[^.\n]{0,80}(?:assessment|challenge|test|hackerrank|codesignal|invitation)", re.I),
+    re.compile(
+        r"means the position is either no longer open,\s*you withdrew from consideration,\s*or you were not selected for the role",
+        re.I,
+    ),
+    re.compile(
+        r"you (?:may|might|could)[^.\n]{0,80}(?:assessment|challenge|test|hackerrank|codesignal|invitation)",
+        re.I,
+    ),
     re.compile(r"(?:trusted platforms?|our vendors?|partners? such as)[^.\n]{0,120}", re.I),
     # Legal disclaimers: "this is not an offer of employment", "does not
     # constitute/guarantee an offer/interview", "no offer is implied".
-    re.compile(r"\b(?:is|are|was|were|be|does|do|did|shall|will|should|can|cannot|could)\s+not\b[^.\n]{0,60}\b(?:an?\s+)?(?:offer|guarantee|promise|commitment|contract)\b[^.\n]{0,60}", re.I),
+    re.compile(
+        r"\b(?:is|are|was|were|be|does|do|did|shall|will|should|can|cannot|could)\s+not\b[^.\n]{0,60}\b(?:an?\s+)?(?:offer|guarantee|promise|commitment|contract)\b[^.\n]{0,60}",
+        re.I,
+    ),
     re.compile(r"\b(?:not|no|never|neither|nor|without)\b[^.\n]{0,40}\boffers?\b[^.\n]{0,60}", re.I),
-    re.compile(r"\b(?:nothing|none)\b[^.\n]{0,60}\b(?:constitutes?|creates?|implies|guarantees?)\b[^.\n]{0,60}\b(?:offer|employment|contract)\b[^.\n]{0,40}", re.I),
+    re.compile(
+        r"\b(?:nothing|none)\b[^.\n]{0,60}\b(?:constitutes?|creates?|implies|guarantees?)\b[^.\n]{0,60}\b(?:offer|employment|contract)\b[^.\n]{0,40}",
+        re.I,
+    ),
     re.compile(r"\bconstitutes?\b[^.\n]{0,30}\b(?:an?\s+)?offer\b[^.\n]{0,60}", re.I),
 ]
 _CONDITIONAL_SENTENCE = re.compile(
@@ -140,8 +174,9 @@ def parse_mail_date(raw) -> str | None:
     raw = str(raw or "").strip()
     if not raw:
         return None
-    from email.utils import parsedate_to_datetime
     from datetime import datetime, timezone
+    from email.utils import parsedate_to_datetime
+
     for parse in (lambda s: datetime.fromisoformat(s.replace("Z", "+00:00")), parsedate_to_datetime):
         try:
             dt = parse(raw)
@@ -158,17 +193,50 @@ def parse_mail_date(raw) -> str | None:
             continue
     return None
 
+
 # Employer names that recur under an ATS/vendor sender or a mangled domain.
 COMPANY_ALIASES = {
-    "spgi": "S&P Global", "s&p global inc": "S&P Global",
-    "gevernova": "GE Vernova", "ge vernova": "GE Vernova",
-    "drwholdings": "DRW", "datadoghq": "Datadog", "flyzipline": "Zipline",
-    "greenhouse mail": "", "greenhouse": "", "workday": "", "myworkday": "",
-    "no reply": "", "noreply": "", "donotreply": "", "notification": "",
+    "spgi": "S&P Global",
+    "s&p global inc": "S&P Global",
+    "gevernova": "GE Vernova",
+    "ge vernova": "GE Vernova",
+    "drwholdings": "DRW",
+    "datadoghq": "Datadog",
+    "flyzipline": "Zipline",
+    "greenhouse mail": "",
+    "greenhouse": "",
+    "workday": "",
+    "myworkday": "",
+    "no reply": "",
+    "noreply": "",
+    "donotreply": "",
+    "notification": "",
 }
-_DOMAIN_NOISE = {"com", "org", "net", "us", "io", "co", "jobs", "mail", "email",
-                 "careers", "myworkday", "greenhouse", "fly", "app", "hq", "inc",
-                 "recruiting", "talent", "notify", "notifications", "wd1", "wd3", "wd5"}
+_DOMAIN_NOISE = {
+    "com",
+    "org",
+    "net",
+    "us",
+    "io",
+    "co",
+    "jobs",
+    "mail",
+    "email",
+    "careers",
+    "myworkday",
+    "greenhouse",
+    "fly",
+    "app",
+    "hq",
+    "inc",
+    "recruiting",
+    "talent",
+    "notify",
+    "notifications",
+    "wd1",
+    "wd3",
+    "wd5",
+}
 
 
 def _clean_company(value: str) -> str:
@@ -176,7 +244,9 @@ def _clean_company(value: str) -> str:
     alias = COMPANY_ALIASES.get(value.lower())
     if alias is not None:
         return alias
-    value = re.sub(r"\s+(?:inc|inc\.|llc|ltd|holdings|hq|corp|corporation|co)$", "", value, flags=re.I).strip()
+    value = re.sub(
+        r"\s+(?:inc|inc\.|llc|ltd|holdings|hq|corp|corporation|co)$", "", value, flags=re.I
+    ).strip()
     return value
 
 
@@ -184,13 +254,31 @@ def infer_company(subject: str, sender: str, body: str = "") -> str:
     display, address = parseaddr(sender)
     candidates = [
         re.search(r"important information about your (.+?) application", subject, re.I),
-        re.search(r"(?:reminder:\s*)?(?:complete|completing|take|start) (?:the |your |a )?(.+?) (?:skills |online )?assessment", subject, re.I),
+        re.search(
+            r"(?:reminder:\s*)?(?:complete|completing|take|start) (?:the |your |a )?(.+?) (?:skills |online )?assessment",
+            subject,
+            re.I,
+        ),
         re.search(r"we(?:'|’)ve got your (.+?) application", subject, re.I),
         re.search(r"^(.+?) application update$", subject, re.I),
-        re.search(r"thank(?:s| you) for apply(?:ing)? to (?:the )?([^|!.\n]+?)(?:\s+[-–—:]\s+|['’]s\b|!|\.|$)", subject, re.I),
-        re.search(r"thank(?:s| you) for (?:your )?(?:application|interest) (?:in|to|at) ([^!|–—,]+)", subject, re.I),
-        re.search(r"(?:successfully |you have )?(?:applied|application) (?:to|for|received for) ([^!|–—,]+)", subject, re.I),
-        re.search(r"we(?:'|’ve| have)? received your (?:resume |application )?(?:for |at )?([^!|–—,]+?)(?: application)?$", subject, re.I),
+        re.search(
+            r"thank(?:s| you) for apply(?:ing)? to (?:the )?([^|!.\n]+?)(?:\s+[-–—:]\s+|['’]s\b|!|\.|$)",
+            subject,
+            re.I,
+        ),
+        re.search(
+            r"thank(?:s| you) for (?:your )?(?:application|interest) (?:in|to|at) ([^!|–—,]+)", subject, re.I
+        ),
+        re.search(
+            r"(?:successfully |you have )?(?:applied|application) (?:to|for|received for) ([^!|–—,]+)",
+            subject,
+            re.I,
+        ),
+        re.search(
+            r"we(?:'|’ve| have)? received your (?:resume |application )?(?:for |at )?([^!|–—,]+?)(?: application)?$",
+            subject,
+            re.I,
+        ),
         re.search(r"\bat\s+([^!|–—,]+)$", subject, re.I),
         re.search(r"^([^|–—-]+?)\s*[-–—:]\s*(?:application|candidate)", subject, re.I),
         re.search(r"application (?:received|submitted).*?\b(?:at|to)\s+([^!|–—,]+)", subject, re.I),
@@ -206,13 +294,18 @@ def infer_company(subject: str, sender: str, body: str = "") -> str:
         if cleaned:
             return cleaned
     local = address.split("@", 1)[0] if "@" in address else ""
-    if local and local.lower() not in GENERIC_SENDERS and not local.lower().startswith(("no-reply", "noreply", "recruit", "donotreply", "do-not-reply")):
+    if (
+        local
+        and local.lower() not in GENERIC_SENDERS
+        and not local.lower().startswith(("no-reply", "noreply", "recruit", "donotreply", "do-not-reply"))
+    ):
         return _clean_company(re.sub(r"[._-]+", " ", local).title()) or "Unknown employer"
     domain = address.split("@", 1)[1].lower() if "@" in address else ""
     labels = [x for x in re.split(r"[.\-]", domain) if x and x not in _DOMAIN_NOISE]
     if labels:
         return _clean_company(labels[-1].title()) or _clean_company(labels[0].title()) or "Unknown employer"
     return _clean_company(shown) or address or "Unknown employer"
+
 
 # Subjects that carry no role information — treated as role "general" so repeat
 # status messages for one application collapse instead of forking new rows.
@@ -242,9 +335,10 @@ def infer_role(subject: str) -> str:
         return ""
     return cleaned
 
+
 def _soft_rejection(status_text: str) -> bool:
     for match in REJECTION_SOFT.finditer(status_text):
-        window = status_text[max(0, match.start() - 90): match.end() + 90]
+        window = status_text[max(0, match.start() - 90) : match.end() + 90]
         if DECISION_CONTEXT.search(window):
             return True
     return False
@@ -280,25 +374,49 @@ def classify(subject: str, body: str, sender: str, date: str) -> dict | None:
     if not matched_pattern and not stage_signal:
         return None
     stage = _stage(subject, status_text)
-    req = re.search(r"\b(?:requisition|job id|req(?:uisition)?)\b[ #:.-]*((?=[A-Z0-9-]*\d)[A-Z0-9-]{4,})", text, re.I)
+    req = re.search(
+        r"\b(?:requisition|job id|req(?:uisition)?)\b[ #:.-]*((?=[A-Z0-9-]*\d)[A-Z0-9-]{4,})", text, re.I
+    )
     company = infer_company(subject, sender, body)
-    return {"subject": subject, "company_hint": company, "role_hint": infer_role(subject), "date": date,
-            "date_iso": parse_mail_date(date), "stage": stage,
-            "requisition_id": req.group(1) if req else None,
-            "confidence": "high" if matched_pattern else "medium"}
+    return {
+        "subject": subject,
+        "company_hint": company,
+        "role_hint": infer_role(subject),
+        "date": date,
+        "date_iso": parse_mail_date(date),
+        "stage": stage,
+        "requisition_id": req.group(1) if req else None,
+        "confidence": "high" if matched_pattern else "medium",
+    }
+
 
 # Subject substrings used as a fast, server-side prefilter (one compound
 # ``whose`` clause). classify() makes the real decision on subject + body.
 MAIL_SUBJECT_HINTS = [
-    "application", "applied", "candidate", "assessment", "interview",
-    "offer", "next step", "thank you for", "we received", "your resume",
-    "recruit", "not moving forward", "status update",
+    "application",
+    "applied",
+    "candidate",
+    "assessment",
+    "interview",
+    "offer",
+    "next step",
+    "thank you for",
+    "we received",
+    "your resume",
+    "recruit",
+    "not moving forward",
+    "status update",
 ]
 MAIL_TIMEOUT_SECONDS = int(os.environ.get("JOB_MONITOR_MAIL_TIMEOUT", "150"))
 
 
-def apple_mail(account_address: str, years: int = 5, days: int | None = None,
-               timeout: int | None = None, max_per_box: int = 600) -> list[dict]:
+def apple_mail(
+    account_address: str,
+    years: int = 5,
+    days: int | None = None,
+    timeout: int | None = None,
+    max_per_box: int = 600,
+) -> list[dict]:
     """Read matching message metadata through Mail's approved Automation access.
 
     Message bodies and credentials never leave Mail. AppleScript's ``whose`` is
@@ -307,9 +425,9 @@ def apple_mail(account_address: str, years: int = 5, days: int | None = None,
     scan also keeps its own wall-clock budget and returns partial results rather
     than being killed, so statuses keep advancing even on a slow run.
     """
-    safe_address = account_address.replace('\\', '\\\\').replace('"', '\\"')
+    safe_address = account_address.replace("\\", "\\\\").replace('"', '\\"')
     lookback_days = days if days is not None else years * 365
-    subject_clause = " or ".join('subject contains "%s"' % h.replace('"', '') for h in MAIL_SUBJECT_HINTS)
+    subject_clause = " or ".join('subject contains "%s"' % h.replace('"', "") for h in MAIL_SUBJECT_HINTS)
     limit = timeout if timeout is not None else MAIL_TIMEOUT_SECONDS
     inner_budget = max(20, limit - 20)
     script = f'''
@@ -370,9 +488,13 @@ tell application "Mail"
 end tell
 '''
     try:
-        proc = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, check=True, timeout=limit)
+        proc = subprocess.run(
+            ["osascript", "-e", script], capture_output=True, text=True, check=True, timeout=limit
+        )
     except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(f"Apple Mail scan for {account_address} exceeded {limit}s and was stopped safely") from exc
+        raise RuntimeError(
+            f"Apple Mail scan for {account_address} exceeded {limit}s and was stopped safely"
+        ) from exc
     found, seen = [], set()
     for row in proc.stdout.split(chr(30)):
         fields = row.strip().split(chr(31))
@@ -386,17 +508,33 @@ end tell
             found.append(item)
     return found
 
+
 def main():
-    p = argparse.ArgumentParser(); p.add_argument("--account"); p.add_argument("--years", type=int, default=5); p.add_argument("--days", type=int); p.add_argument("--merge-input", type=Path, nargs="+"); p.add_argument("--output", type=Path, default=Path("data/application_history.json")); args = p.parse_args()
+    p = argparse.ArgumentParser()
+    p.add_argument("--account")
+    p.add_argument("--years", type=int, default=5)
+    p.add_argument("--days", type=int)
+    p.add_argument("--merge-input", type=Path, nargs="+")
+    p.add_argument("--output", type=Path, default=Path("data/application_history.json"))
+    args = p.parse_args()
     if args.merge_input:
-        combined = [item for path in args.merge_input for item in json.loads(path.read_text()).get("applications", [])]
+        combined = [
+            item for path in args.merge_input for item in json.loads(path.read_text()).get("applications", [])
+        ]
         results, seen = [], set()
         for item in combined:
             key = (item.get("subject"), item.get("date"), item.get("mailbox_account"))
             if key not in seen:
-                seen.add(key); results.append(item)
-    elif args.account: results = apple_mail(args.account, args.years, args.days)
-    else: p.error("provide --account (Mail.app address) or --merge-input")
-    args.output.parent.mkdir(parents=True, exist_ok=True); args.output.write_text(json.dumps({"applications": results}, indent=2)); print(f"Found {len(results)} likely application events")
+                seen.add(key)
+                results.append(item)
+    elif args.account:
+        results = apple_mail(args.account, args.years, args.days)
+    else:
+        p.error("provide --account (Mail.app address) or --merge-input")
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(json.dumps({"applications": results}, indent=2))
+    print(f"Found {len(results)} likely application events")
 
-if __name__ == "__main__": main()
+
+if __name__ == "__main__":
+    main()

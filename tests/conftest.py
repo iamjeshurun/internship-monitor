@@ -1,4 +1,5 @@
 """Make ``src`` and ``mac`` importable regardless of which tests run."""
+
 import sys
 from pathlib import Path
 

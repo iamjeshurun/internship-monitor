@@ -2,7 +2,6 @@ name: Tests
 on:
   push:
     branches: [main]
-    paths-ignore: ["data/state.json", "data/review_queue.json"]
   pull_request: {}
   workflow_dispatch: {}
 permissions:
@@ -15,5 +14,6 @@ jobs:
       - uses: actions/setup-python@v7
         with: {python-version: "3.12", cache: pip}
       - run: pip install -r requirements.txt
+      - run: pip install ruff && ruff format --check src mac tests scripts && ruff check src mac tests scripts
       - run: python -m pytest tests -q
       - run: python -m compileall -q src mac

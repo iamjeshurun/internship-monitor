@@ -27,7 +27,9 @@ class StateStore:
         if current is None:
             current = {**job, "first_seen": now, "status": "discovered"}
         current.update(job)
-        current.update({"last_seen": now, "assessment": assessment, "scoring_version": self.data["scoring_version"]})
+        current.update(
+            {"last_seen": now, "assessment": assessment, "scoring_version": self.data["scoring_version"]}
+        )
         current.pop("became_ready", None)
         if assessment["eligible"] and assessment["score"] >= assessment["notify_threshold"]:
             if current["status"] in {"discovered", "screened_out"}:
@@ -64,13 +66,20 @@ class StateStore:
             value = datetime.fromisoformat(raw)
             return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
 
-        jobs = [{k: v for k, v in j.items() if k != "became_ready"}
-                for j in self.data["jobs"].values()
-                if j.get("status") == "ready_for_review" and seen_at(j) >= active_cutoff]
-        return sorted(jobs, key=lambda j: (
-            -j["assessment"]["score"],
-            j.get("ready_since", j.get("first_seen", "")),
-        ))
+        jobs = [
+            {k: v for k, v in j.items() if k != "became_ready"}
+            for j in self.data["jobs"].values()
+            if j.get("status") == "ready_for_review" and seen_at(j) >= active_cutoff
+        ]
+        return sorted(
+            jobs,
+            key=lambda j: (
+                -bool(j.get("priority_program")),
+                -bool((j.get("priority_program") or {}).get("official_source")),
+                -j["assessment"]["score"],
+                j.get("ready_since", j.get("first_seen", "")),
+            ),
+        )
 
     def save(self):
         for record in self.data["jobs"].values():

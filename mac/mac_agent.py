@@ -1,27 +1,43 @@
 from __future__ import annotations
-import json, os, tempfile, time
+
+import json
+import os
+import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
+
 import requests
-from requests.adapters import HTTPAdapter
-from requests.exceptions import ConnectionError as ReqConnectionError, Timeout
-from urllib3.util.retry import Retry
 from notifier import notify as native_notify
+from requests.adapters import HTTPAdapter
+from requests.exceptions import ConnectionError as ReqConnectionError
+from requests.exceptions import Timeout
+from urllib3.util.retry import Retry
 
 ROOT = Path(__file__).resolve().parent.parent
-LOCAL = Path(os.environ.get("JOB_MONITOR_LOCAL_DIR", Path.home()/"Library/Application Support/JobMonitor"))
+LOCAL = Path(os.environ.get("JOB_MONITOR_LOCAL_DIR", Path.home() / "Library/Application Support/JobMonitor"))
 LOCAL.mkdir(parents=True, exist_ok=True)
-STATE = LOCAL/"notified.json"
-CACHE = LOCAL/"review_queue.json"
-HEALTH = LOCAL/"agent_health.json"
+STATE = LOCAL / "notified.json"
+CACHE = LOCAL / "review_queue.json"
+HEALTH = LOCAL / "agent_health.json"
 # After this many consecutive failed polls (~15 min at a 180s interval) tell the
 # user once that notifications are paused, so silence never looks like "no jobs".
 STALE_ALERT_AFTER = 5
 
 SESSION = requests.Session()
-SESSION.mount("https://", HTTPAdapter(max_retries=Retry(
-    total=4, connect=4, read=3, backoff_factor=1.5,
-    status_forcelist=[429, 500, 502, 503, 504], allowed_methods=["GET"])))
+SESSION.mount(
+    "https://",
+    HTTPAdapter(
+        max_retries=Retry(
+            total=4,
+            connect=4,
+            read=3,
+            backoff_factor=1.5,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET"],
+        )
+    ),
+)
 
 # Delivery semantics: at-least-once with a hard cap. A job is recorded "pending"
 # BEFORE its alert is sent and "sent" after. A crash in the send->receipt window
@@ -90,17 +106,36 @@ def fetch_queue():
     if local:
         return json.loads(Path(local).read_text())
     repo, token = os.environ["JOB_MONITOR_GITHUB_REPO"], os.environ["JOB_MONITOR_GITHUB_TOKEN"]
-    url = f"https://api.github.com/repos/{repo}/contents/data/review_queue.json"
-    r = _get(url, token)
-    r.raise_for_status()
-    payload = r.json()
-    return {"generated_at": payload.get("generated_at") or "", "jobs": payload.get("jobs", [])}
+    jobs, generated = {}, ""
+    for filename in ("review_queue.json", "priority_queue.json"):
+        url = f"https://api.github.com/repos/{repo}/contents/data/{filename}"
+        r = _get(url, token)
+        if r.status_code == 404 and filename == "priority_queue.json":
+            continue
+        r.raise_for_status()
+        payload = r.json()
+        generated = max(generated, payload.get("generated_at") or "")
+        for job in payload.get("jobs", []):
+            jobs[job["key"]] = job
+    # The fast priority watcher runs on this Mac. Merge its queue over the
+    # slower cloud queues so newly opened programs are available immediately.
+    local_priority = Path(
+        os.environ.get("JOB_MONITOR_LOCAL_PRIORITY_QUEUE", LOCAL / "priority_queue.local.json")
+    )
+    if local_priority.exists():
+        payload = json.loads(local_priority.read_text())
+        generated = max(generated, payload.get("generated_at") or "")
+        for job in payload.get("jobs", []):
+            jobs[job["key"]] = job
+    return {"generated_at": generated, "jobs": list(jobs.values())}
 
 
 def notify(job):
-    title = f"{job['company']} — {job['title']}".replace('"', "'")
-    message = f"{job['assessment']['score']}/100 · {job.get('location','')} · ready for review".replace('"', "'")
-    app_title = "Job Monitor"
+    priority = job.get("priority_program") or {}
+    title = f"{priority.get('name') or job['company']} — {job['title']}".replace('"', "'")
+    verified = "official source verified" if priority.get("official_source") else "ready for review"
+    message = f"{job['assessment']['score']}/100 · {job.get('location', '')} · {verified}".replace('"', "'")
+    app_title = "Priority Program" if priority else "Job Monitor"
     if os.environ.get("JOB_MONITOR_DRY_RUN") == "1":
         print("NOTIFY", app_title, title, message)
         return
@@ -110,15 +145,21 @@ def notify(job):
 def _write_health(ok: bool, error: str | None):
     health = _load(HEALTH, {})
     fails = 0 if ok else int(health.get("consecutive_failures", 0)) + 1
-    health.update({
-        "last_attempt": _now(),
-        "consecutive_failures": fails,
-        "last_error": None if ok else error,
-    })
+    health.update(
+        {
+            "last_attempt": _now(),
+            "consecutive_failures": fails,
+            "last_error": None if ok else error,
+        }
+    )
     if ok:
         health["last_success"] = _now()
     if fails == STALE_ALERT_AFTER and os.environ.get("JOB_MONITOR_DRY_RUN") != "1":
-        native_notify("Job Monitor", "Can't reach GitHub — new-job notifications are paused.", "Check your network / token")
+        native_notify(
+            "Job Monitor",
+            "Can't reach GitHub — new-job notifications are paused.",
+            "Check your network / token",
+        )
     _atomic_write(HEALTH, json.dumps(health, indent=2))
 
 

@@ -58,7 +58,11 @@ Mailbox access is read-only, local, and metadata-oriented: bodies are used trans
 
 ## Scope decisions
 
-The private working repository also had a 10-minute "priority program" watcher (Google STEP–style alerts), an X/Twitter source, Outlook/Gmail API and `.eml` importers, a Chromium autofill extension, and a daily email report. They were cut from this edition: the watcher could not fire for its intended employers (they don't publish on the supported ATS APIs), the others were never enabled or used, and each added surface area without changing outcomes. Cutting them removed ~15% of the code and no behaviour the system relies on.
+An X/Twitter source, Outlook/Gmail API and `.eml` importers, and a Chromium autofill extension were cut: none was ever enabled or used, and each added surface area without changing outcomes.
+
+The 10-minute "priority program" watcher (Google STEP–style alerts) and the daily email report are kept, because the author's own instance runs both. The watcher is opt-in through `config/priority_programs.yaml` and only fires when a program appears on the discovery feed or a configured board; most of its intended employers don't publish on the supported ATS APIs, so expect it to be quiet.
+
+This repository is the single codebase. The author's deployment is a private repository holding only personal config, job data, and scheduled workflows that check out and run this code.
 
 ## Sanitization
 

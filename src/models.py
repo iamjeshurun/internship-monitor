@@ -4,7 +4,6 @@ from dataclasses import asdict, dataclass, field
 from hashlib import sha256
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-
 TRACKING_KEYS = {"ref", "source", "gh_src"}
 
 
@@ -12,8 +11,14 @@ def canonical_url(url: str) -> str:
     if not url:
         return ""
     parts = urlsplit(url)
-    query = [(k, v) for k, v in parse_qsl(parts.query) if not k.lower().startswith("utm_") and k.lower() not in TRACKING_KEYS]
-    return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path.rstrip("/"), urlencode(query), ""))
+    query = [
+        (k, v)
+        for k, v in parse_qsl(parts.query)
+        if not k.lower().startswith("utm_") and k.lower() not in TRACKING_KEYS
+    ]
+    return urlunsplit(
+        (parts.scheme.lower(), parts.netloc.lower(), parts.path.rstrip("/"), urlencode(query), "")
+    )
 
 
 @dataclass

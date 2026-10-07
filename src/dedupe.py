@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 
-
 DIRECT_SOURCES = {"greenhouse", "lever", "ashby", "custom_jsonld"}
 
 # Coarse location buckets so the same role from an aggregator ("NYC") and an
@@ -11,7 +10,10 @@ DIRECT_SOURCES = {"greenhouse", "lever", "ashby", "custom_jsonld"}
 _LOCATION_BUCKETS = [
     ("remote", r"\bremote\b"),
     ("new-york", r"\bnew york\b|\bnyc\b|\bmanhattan\b|\bbrooklyn\b"),
-    ("bay-area", r"\bsan francisco\b|\bsf\b|\bpalo alto\b|\bmenlo park\b|\bmountain view\b|\bsunnyvale\b|\bsanta clara\b|\bsan jose\b|\bcupertino\b|\bredwood city\b|\bbay area\b"),
+    (
+        "bay-area",
+        r"\bsan francisco\b|\bsf\b|\bpalo alto\b|\bmenlo park\b|\bmountain view\b|\bsunnyvale\b|\bsanta clara\b|\bsan jose\b|\bcupertino\b|\bredwood city\b|\bbay area\b",
+    ),
     ("seattle", r"\bseattle\b|\bredmond\b|\bbellevue\b"),
     ("chicago", r"\bchicago\b"),
     ("los-angeles", r"\blos angeles\b|\bsanta monica\b|\bpasadena\b|\bculver city\b"),
@@ -26,7 +28,7 @@ _LOCATION_BUCKETS = [
 ]
 
 
-def _normalized(value: str) -> str:
+def normalized(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", (value or "").lower()).strip()
 
 
@@ -36,14 +38,30 @@ def location_bucket(value: str) -> str:
         if re.search(pattern, text):
             return name
     # Two-letter state codes as a fallback bucket.
-    state = re.search(r"\b([a-z]{2})\b\s*$", _normalized(value))
-    if state and state.group(1) in {"ny", "ca", "wa", "il", "tx", "ma", "co", "ga", "va", "nc", "nj", "pa", "fl", "az", "or"}:
+    state = re.search(r"\b([a-z]{2})\b\s*$", normalized(value))
+    if state and state.group(1) in {
+        "ny",
+        "ca",
+        "wa",
+        "il",
+        "tx",
+        "ma",
+        "co",
+        "ga",
+        "va",
+        "nc",
+        "nj",
+        "pa",
+        "fl",
+        "az",
+        "or",
+    }:
         return f"state-{state.group(1)}"
-    return _normalized(value) or "unspecified"
+    return normalized(value) or "unspecified"
 
 
 def normalized_title(value: str) -> str:
-    text = _normalized(value)
+    text = normalized(value)
     text = re.sub(r"\b(summer|spring|fall|winter|autumn)\s*(20\d\d)?\b", "", text)
     text = re.sub(r"\b20\d\d\b", "", text)
     text = re.sub(r"\b(intern|internship|co op|coop|program|opportunity|req\s*\d+|id\s*\d+)\b", "", text)
@@ -51,19 +69,27 @@ def normalized_title(value: str) -> str:
 
 
 def dedupe_key(job: dict) -> str:
-    return "role|" + "|".join((
-        _normalized(job.get("company", "")),
-        normalized_title(job.get("title", "")),
-        location_bucket(job.get("location", "")),
-    ))
+    priority = job.get("priority_program") or {}
+    if priority:
+        return "priority|" + "|".join((priority.get("id", ""), location_bucket(job.get("location", ""))))
+    return "role|" + "|".join(
+        (
+            normalized(job.get("company", "")),
+            normalized_title(job.get("title", "")),
+            location_bucket(job.get("location", "")),
+        )
+    )
 
 
 def _is_direct(job: dict) -> bool:
-    return job.get("source") in DIRECT_SOURCES
+    return job.get("source") in DIRECT_SOURCES or bool(
+        (job.get("priority_program") or {}).get("official_source")
+    )
 
 
 def _rank(job: dict) -> tuple:
-    return (job.get("source") in DIRECT_SOURCES, bool(job.get("description")))
+    official_program = bool((job.get("priority_program") or {}).get("official_source"))
+    return (official_program, job.get("source") in DIRECT_SOURCES, bool(job.get("description")))
 
 
 def _identity(job: dict) -> str:
