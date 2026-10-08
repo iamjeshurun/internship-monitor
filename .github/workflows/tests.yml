@@ -16,4 +16,8 @@ jobs:
       - run: pip install -r requirements.txt
       - run: pip install ruff && ruff format --check src mac tests scripts && ruff check src mac tests scripts
       - run: python -m pytest tests -q
+      - uses: actions/setup-node@v6
+        with: {node-version: "22"}
+      - run: node --test tests/frontend.test.mjs
+      - run: python scripts/build_demo.py --check
       - run: python -m compileall -q src mac

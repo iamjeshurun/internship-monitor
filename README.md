@@ -161,3 +161,37 @@ The generated packet separates safe saved answers from questions requiring revie
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Interactive dashboard and public demo
+
+The dashboard uses the same interface in two modes:
+
+- **Public demo:** `web/` contains a static site with 16 explicitly fictional records. Board, table, activity, search, stage filters, match explanations, priority labels and status changes work in the browser. Reloading or choosing **Reset demo** restores the fixtures. It never calls a local tracker, a mailbox, or a remote API.
+- **Local tracker:** `python mac/dashboard.py` serves that interface at `http://127.0.0.1:8765`. It reads the existing queue, mailbox history and manual statuses, and saves changes through Flask. Mailbox/agent health warnings remain visible. Records refresh every minute while the page is visible and no detail panel is open, or on **Refresh records**.
+
+Preview the public demo from the repository root:
+
+```sh
+python scripts/build_demo.py
+python -m http.server 8795 --bind 127.0.0.1 --directory web
+```
+
+Open `http://127.0.0.1:8795`. This is a local preview, not a published demo URL. The `web/` directory is ready for static hosting, including GitHub Pages under a repository subpath; publishing is a separate step. Do not upload the repository root or local runtime data.
+
+The opening uses current-stage counts, not a claim about past stage transitions. Decorative motion repeats every five seconds while the opening is visible, pauses in background tabs, supports a pause control, and respects reduced-motion preferences. Activity dates are mailbox-message dates, not interview appointments. Match scores describe profile fit, not hiring probabilities.
+
+The demo is generated only from `demo/fixtures.json` through the real `merge_tracker()` function; the builder never reads `JOB_MONITOR_LOCAL_DIR` or personal files. Run `python scripts/build_demo.py --check` to verify the committed bootstrap matches those fixtures. Edit the fixtures and regenerate instead of editing `web/bootstrap.js`.
+
+The local JSON interface is `GET /api/tracker` and `POST /api/status/<key>`. Saves require the current browser session's CSRF token from `/bootstrap.js`, a known record key and one of the eight supported stages. The existing form route `/status/<key>` remains available with a `csrf_token` field. Ready/Reviewing remain subject to existing mailbox-stage precedence; the UI displays the resolved backend state after a save. The local service stays bound to loopback and is not a public multi-user backend.
+
+`mac/install.sh` and `scripts/deploy_runtime.sh` copy the shared `web/` assets into the local runtime. They should be run only when you intend to update that installed instance.
+
+Validation:
+
+```sh
+python -m pytest tests -q
+node --test tests/frontend.test.mjs
+python scripts/build_demo.py --check
+```
+
+The frontend tests compare all 128 demo record/status combinations against the actual Python merger, including mailbox-only records, manual precedence, preserved mailbox events and safe rendering of untrusted text/links. Node 22+ is needed for these tests, not to run or host the dashboard.

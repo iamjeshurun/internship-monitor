@@ -12,6 +12,8 @@ cp "$PROJECT_DIR/requirements.txt" "$RUNTIME/requirements.txt"
 cp "$PROJECT_DIR/mac/mac_agent.py" "$RUNTIME/mac/mac_agent.py"
 cp "$PROJECT_DIR/mac/run_agent.sh" "$RUNTIME/mac/run_agent.sh"
 cp "$PROJECT_DIR/mac/dashboard.py" "$RUNTIME/mac/dashboard.py"
+# Shared dashboard assets (same UI as the fictional public demo).
+rsync -a --delete "$PROJECT_DIR/web/" "$RUNTIME/web/"
 cp "$PROJECT_DIR/mac/tracker.py" "$RUNTIME/mac/tracker.py"
 cp "$PROJECT_DIR/mac/mail_sync.py" "$RUNTIME/mac/mail_sync.py"
 cp "$PROJECT_DIR/mac/notifier.py" "$RUNTIME/mac/notifier.py"

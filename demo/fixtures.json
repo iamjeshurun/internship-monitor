@@ -1,0 +1,456 @@
+{
+  "snapshot_at": "2026-10-08T12:00:00+00:00",
+  "queue": {
+    "jobs": [
+      {
+        "key": "demo-00",
+        "company": "Northstar",
+        "title": "Data Science Intern",
+        "location": "Boston, MA",
+        "url": "https://example.com/jobs/DEMO-100",
+        "first_seen": "2026-10-01T12:00:00+00:00",
+        "source": "fictional_board",
+        "assessment": {
+          "score": 91,
+          "reasons": [
+            "Role aligns with the demo profile",
+            "Relevant technical skills"
+          ],
+          "flags": []
+        }
+      },
+      {
+        "key": "demo-01",
+        "company": "Forma",
+        "title": "Product Analytics Intern",
+        "location": "Remote",
+        "url": "https://example.com/jobs/DEMO-101",
+        "first_seen": "2026-10-02T12:00:00+00:00",
+        "source": "fictional_board",
+        "assessment": {
+          "score": 86,
+          "reasons": [
+            "Role aligns with the demo profile",
+            "Relevant technical skills"
+          ],
+          "flags": []
+        }
+      },
+      {
+        "key": "demo-02",
+        "company": "Meridian",
+        "title": "Software Engineering Intern",
+        "location": "New York, NY",
+        "url": "https://example.com/jobs/DEMO-102",
+        "first_seen": "2026-10-03T12:00:00+00:00",
+        "source": "fictional_board",
+        "assessment": {
+          "score": 88,
+          "reasons": [
+            "Role aligns with the demo profile",
+            "Relevant technical skills"
+          ],
+          "flags": []
+        }
+      },
+      {
+        "key": "demo-03",
+        "company": "Orbit Labs",
+        "title": "Data Engineering Intern",
+        "location": "Seattle, WA",
+        "url": "https://example.com/jobs/DEMO-103",
+        "first_seen": "2026-10-04T12:00:00+00:00",
+        "source": "fictional_board",
+        "assessment": {
+          "score": 94,
+          "reasons": [
+            "Role aligns with the demo profile",
+            "Relevant technical skills"
+          ],
+          "flags": [
+            "Verify graduation window"
+          ]
+        },
+        "priority_program": {
+          "name": "Summer 2027 cohort",
+          "official_source": true
+        }
+      },
+      {
+        "key": "demo-04",
+        "company": "Fieldwork",
+        "title": "Research Intern",
+        "location": "Remote",
+        "url": "https://example.com/jobs/DEMO-104",
+        "first_seen": "2026-10-05T12:00:00+00:00",
+        "source": "fictional_board",
+        "assessment": {
+          "score": 84,
+          "reasons": [
+            "Role aligns with the demo profile",
+            "Relevant technical skills"
+          ],
+          "flags": []
+        }
+      },
+      {
+        "key": "demo-05",
+        "company": "Aster",
+        "title": "ML Engineering Intern",
+        "location": "San Francisco, CA",
+        "url": "https://example.com/jobs/DEMO-105",
+        "first_seen": "2026-10-01T12:00:00+00:00",
+        "source": "fictional_board",
+        "assessment": {
+          "score": 90,
+          "reasons": [
+            "Role aligns with the demo profile",
+            "Relevant technical skills"
+          ],
+          "flags": []
+        },
+        "priority_program": {
+          "name": "Summer 2027 cohort",
+          "official_source": false
+        }
+      },
+      {
+        "key": "demo-06",
+        "company": "Parallel",
+        "title": "Analytics Intern",
+        "location": "Chicago, IL",
+        "url": "https://example.com/jobs/DEMO-106",
+        "first_seen": "2026-10-02T12:00:00+00:00",
+        "source": "fictional_board",
+        "assessment": {
+          "score": 83,
+          "reasons": [
+            "Role aligns with the demo profile",
+            "Relevant technical skills"
+          ],
+          "flags": []
+        }
+      },
+      {
+        "key": "demo-07",
+        "company": "Kindred",
+        "title": "Product Intern",
+        "location": "Austin, TX",
+        "url": "https://example.com/jobs/DEMO-107",
+        "first_seen": "2026-10-03T12:00:00+00:00",
+        "source": "fictional_board",
+        "assessment": {
+          "score": 79,
+          "reasons": [
+            "Role aligns with the demo profile",
+            "Relevant technical skills"
+          ],
+          "flags": [
+            "Verify graduation window"
+          ]
+        }
+      },
+      {
+        "key": "demo-09",
+        "company": "Latticeworks",
+        "title": "Data Analyst Intern",
+        "location": "Remote",
+        "url": "https://example.com/jobs/DEMO-109",
+        "first_seen": "2026-10-05T12:00:00+00:00",
+        "source": "fictional_board",
+        "assessment": {
+          "score": 82,
+          "reasons": [
+            "Role aligns with the demo profile",
+            "Relevant technical skills"
+          ],
+          "flags": []
+        }
+      },
+      {
+        "key": "demo-10",
+        "company": "Sonder Labs",
+        "title": "Research Intern",
+        "location": "New York, NY",
+        "url": "https://example.com/jobs/DEMO-110",
+        "first_seen": "2026-10-01T12:00:00+00:00",
+        "source": "fictional_board",
+        "assessment": {
+          "score": 87,
+          "reasons": [
+            "Role aligns with the demo profile",
+            "Relevant technical skills"
+          ],
+          "flags": []
+        }
+      },
+      {
+        "key": "demo-12",
+        "company": "Folio",
+        "title": "Business Intelligence Intern",
+        "location": "Remote",
+        "url": "https://example.com/jobs/DEMO-112",
+        "first_seen": "2026-10-03T12:00:00+00:00",
+        "source": "fictional_board",
+        "assessment": {
+          "score": 74,
+          "reasons": [
+            "Role aligns with the demo profile",
+            "Relevant technical skills"
+          ],
+          "flags": []
+        }
+      },
+      {
+        "key": "demo-13",
+        "company": "Waymark",
+        "title": "Data Science Intern",
+        "location": "Atlanta, GA",
+        "url": "https://example.com/jobs/DEMO-113",
+        "first_seen": "2026-10-04T12:00:00+00:00",
+        "source": "fictional_board",
+        "assessment": {
+          "score": 89,
+          "reasons": [
+            "Role aligns with the demo profile",
+            "Relevant technical skills"
+          ],
+          "flags": []
+        }
+      },
+      {
+        "key": "demo-14",
+        "company": "Terrace",
+        "title": "Software Intern",
+        "location": "New York, NY",
+        "url": "https://example.com/jobs/DEMO-114",
+        "first_seen": "2026-10-05T12:00:00+00:00",
+        "source": "fictional_board",
+        "assessment": {
+          "score": 85,
+          "reasons": [
+            "Role aligns with the demo profile",
+            "Relevant technical skills"
+          ],
+          "flags": [
+            "Verify graduation window"
+          ]
+        }
+      },
+      {
+        "key": "demo-15",
+        "company": "Daybreak",
+        "title": "Product Analytics Intern",
+        "location": "Remote",
+        "url": "https://example.com/jobs/DEMO-115",
+        "first_seen": "2026-10-01T12:00:00+00:00",
+        "source": "fictional_board",
+        "assessment": {
+          "score": 80,
+          "reasons": [
+            "Role aligns with the demo profile",
+            "Relevant technical skills"
+          ],
+          "flags": []
+        }
+      }
+    ]
+  },
+  "history": {
+    "applications": [
+      {
+        "company_hint": "Northstar",
+        "role_hint": "Data Science Intern",
+        "requisition_id": "DEMO-100",
+        "stage": "applied",
+        "date_iso": "2026-10-02T14:00:00+00:00",
+        "date": "Oct 2, 2026",
+        "subject": "Northstar: applied update (fictional)",
+        "mailbox_account": "demo@example.test",
+        "confidence": 0.94
+      },
+      {
+        "company_hint": "Northstar",
+        "role_hint": "Data Science Intern",
+        "requisition_id": "DEMO-100",
+        "stage": "interview",
+        "date_iso": "2026-10-03T14:00:00+00:00",
+        "date": "Oct 3, 2026",
+        "subject": "Northstar: interview update (fictional)",
+        "mailbox_account": "demo@example.test",
+        "confidence": 0.94
+      },
+      {
+        "company_hint": "Forma",
+        "role_hint": "Product Analytics Intern",
+        "requisition_id": "DEMO-101",
+        "stage": "applied",
+        "date_iso": "2026-10-03T14:00:00+00:00",
+        "date": "Oct 3, 2026",
+        "subject": "Forma: applied update (fictional)",
+        "mailbox_account": "demo@example.test",
+        "confidence": 0.94
+      },
+      {
+        "company_hint": "Forma",
+        "role_hint": "Product Analytics Intern",
+        "requisition_id": "DEMO-101",
+        "stage": "interview",
+        "date_iso": "2026-10-04T14:00:00+00:00",
+        "date": "Oct 4, 2026",
+        "subject": "Forma: interview update (fictional)",
+        "mailbox_account": "demo@example.test",
+        "confidence": 0.94
+      },
+      {
+        "company_hint": "Meridian",
+        "role_hint": "Software Engineering Intern",
+        "requisition_id": "DEMO-102",
+        "stage": "applied",
+        "date_iso": "2026-10-04T14:00:00+00:00",
+        "date": "Oct 4, 2026",
+        "subject": "Meridian: applied update (fictional)",
+        "mailbox_account": "demo@example.test",
+        "confidence": 0.94
+      },
+      {
+        "company_hint": "Meridian",
+        "role_hint": "Software Engineering Intern",
+        "requisition_id": "DEMO-102",
+        "stage": "assessment",
+        "date_iso": "2026-10-05T14:00:00+00:00",
+        "date": "Oct 5, 2026",
+        "subject": "Meridian: assessment update (fictional)",
+        "mailbox_account": "demo@example.test",
+        "confidence": 0.94
+      },
+      {
+        "company_hint": "Aster",
+        "role_hint": "ML Engineering Intern",
+        "requisition_id": "DEMO-105",
+        "stage": "applied",
+        "date_iso": "2026-10-03T14:00:00+00:00",
+        "date": "Oct 3, 2026",
+        "subject": "Aster: applied update (fictional)",
+        "mailbox_account": "demo@example.test",
+        "confidence": 0.94
+      },
+      {
+        "company_hint": "Aster",
+        "role_hint": "ML Engineering Intern",
+        "requisition_id": "DEMO-105",
+        "stage": "assessment",
+        "date_iso": "2026-10-04T14:00:00+00:00",
+        "date": "Oct 4, 2026",
+        "subject": "Aster: assessment update (fictional)",
+        "mailbox_account": "demo@example.test",
+        "confidence": 0.94
+      },
+      {
+        "company_hint": "Parallel",
+        "role_hint": "Analytics Intern",
+        "requisition_id": "DEMO-106",
+        "stage": "applied",
+        "date_iso": "2026-10-04T14:00:00+00:00",
+        "date": "Oct 4, 2026",
+        "subject": "Parallel: applied update (fictional)",
+        "mailbox_account": "demo@example.test",
+        "confidence": 0.94
+      },
+      {
+        "company_hint": "Index",
+        "role_hint": "Software Intern",
+        "requisition_id": "DEMO-108",
+        "stage": "applied",
+        "date_iso": "2026-10-02T14:00:00+00:00",
+        "date": "Oct 2, 2026",
+        "subject": "Index: applied update (fictional)",
+        "mailbox_account": "demo@example.test",
+        "confidence": 0.94
+      },
+      {
+        "company_hint": "Index",
+        "role_hint": "Software Intern",
+        "requisition_id": "DEMO-108",
+        "stage": "offer",
+        "date_iso": "2026-10-03T14:00:00+00:00",
+        "date": "Oct 3, 2026",
+        "subject": "Index: offer update (fictional)",
+        "mailbox_account": "demo@example.test",
+        "confidence": 0.94
+      },
+      {
+        "company_hint": "Latticeworks",
+        "role_hint": "Data Analyst Intern",
+        "requisition_id": "DEMO-109",
+        "stage": "applied",
+        "date_iso": "2026-10-03T14:00:00+00:00",
+        "date": "Oct 3, 2026",
+        "subject": "Latticeworks: applied update (fictional)",
+        "mailbox_account": "demo@example.test",
+        "confidence": 0.94
+      },
+      {
+        "company_hint": "Sonder Labs",
+        "role_hint": "Research Intern",
+        "requisition_id": "DEMO-110",
+        "stage": "applied",
+        "date_iso": "2026-10-04T14:00:00+00:00",
+        "date": "Oct 4, 2026",
+        "subject": "Sonder Labs: applied update (fictional)",
+        "mailbox_account": "demo@example.test",
+        "confidence": 0.94
+      },
+      {
+        "company_hint": "Canopy",
+        "role_hint": "Engineering Intern",
+        "requisition_id": "DEMO-111",
+        "stage": "applied",
+        "date_iso": "2026-10-05T14:00:00+00:00",
+        "date": "Oct 5, 2026",
+        "subject": "Canopy: applied update (fictional)",
+        "mailbox_account": "demo@example.test",
+        "confidence": 0.94
+      },
+      {
+        "company_hint": "Canopy",
+        "role_hint": "Engineering Intern",
+        "requisition_id": "DEMO-111",
+        "stage": "rejected",
+        "date_iso": "2026-10-06T14:00:00+00:00",
+        "date": "Oct 6, 2026",
+        "subject": "Canopy: rejected update (fictional)",
+        "mailbox_account": "demo@example.test",
+        "confidence": 0.94
+      },
+      {
+        "company_hint": "Daybreak",
+        "role_hint": "Product Analytics Intern",
+        "requisition_id": "DEMO-115",
+        "stage": "applied",
+        "date_iso": "2026-10-05T14:00:00+00:00",
+        "date": "Oct 5, 2026",
+        "subject": "Daybreak: applied update (fictional)",
+        "mailbox_account": "demo@example.test",
+        "confidence": 0.94
+      }
+    ]
+  },
+  "statuses": {
+    "demo-07": {
+      "status": "reviewing",
+      "source": "manual",
+      "updated_at": "2026-10-07T15:00:00+00:00"
+    },
+    "demo-12": {
+      "status": "dismissed",
+      "source": "manual",
+      "updated_at": "2026-10-07T15:00:00+00:00"
+    },
+    "demo-14": {
+      "status": "reviewing",
+      "source": "manual",
+      "updated_at": "2026-10-07T15:00:00+00:00"
+    }
+  }
+}

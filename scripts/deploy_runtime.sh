@@ -17,6 +17,8 @@ fi
 
 echo "Syncing code into $RUNTIME"
 rsync -a --delete "$PROJECT_DIR/src/" "$RUNTIME/src/"
+# Shared dashboard assets (same UI as the fictional public demo).
+rsync -a --delete "$PROJECT_DIR/web/" "$RUNTIME/web/"
 for f in mac_agent.py dashboard.py tracker.py mail_sync.py notifier.py run_priority_monitor.sh; do
   cp "$PROJECT_DIR/mac/$f" "$RUNTIME/mac/$f"
 done

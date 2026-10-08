@@ -270,8 +270,8 @@ def merge_tracker(queue: dict, history: dict, statuses: dict) -> list[dict]:
                 "location": "",
                 "url": "",
                 "assessment": {"score": "—", "reasons": [], "flags": []},
-                "status": "applied",
-                "status_source": "email",
+                "status": _manual_status(statuses.get(key)) or "applied",
+                "status_source": "manual" if statuses.get(key) else "email",
             }
         _apply_event(items[key], event, statuses)
 

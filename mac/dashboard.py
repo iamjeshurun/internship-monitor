@@ -1,17 +1,15 @@
 from __future__ import annotations
 
+import json
 import os
+import secrets
 from datetime import datetime, timezone
 from pathlib import Path
 
-from flask import Flask, redirect, render_template_string, request
+from flask import Flask, jsonify, redirect, request, send_from_directory, session
 from tracker import STAGE_ORDER, load_json, merge_tracker, save_status
 
-DATA = Path(os.environ.get("JOB_MONITOR_LOCAL_DIR", Path.home() / "Library/Application Support/JobMonitor"))
-DATA.mkdir(parents=True, exist_ok=True)
-QUEUE, STATUS, HISTORY = DATA / "review_queue.json", DATA / "status.json", DATA / "application_history.json"
-MAIL_HEALTH, AGENT_HEALTH = DATA / "mail_health.json", DATA / "agent_health.json"
-app = Flask(__name__)
+WEB = Path(__file__).resolve().parent.parent / "web"
 
 
 def _hours_since(iso: str | None) -> float | None:
@@ -22,13 +20,13 @@ def _hours_since(iso: str | None) -> float | None:
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return (datetime.now(timezone.utc) - dt).total_seconds() / 3600
-    except ValueError:
+    except (ValueError, TypeError):
         return None
 
 
-def health_warnings() -> list[str]:
+def health_warnings(data: Path) -> list[str]:
     warnings = []
-    mail = load_json(MAIL_HEALTH, {})
+    mail = load_json(data / "mail_health.json", {})
     for account, info in (mail.get("accounts") or {}).items():
         if not info.get("ok"):
             since = _hours_since(info.get("last_ok"))
@@ -36,7 +34,7 @@ def health_warnings() -> list[str]:
             warnings.append(
                 f"Mail scan failing for {account} (last success {ago}): {info.get('error', '')[:120]}"
             )
-    agent = load_json(AGENT_HEALTH, {})
+    agent = load_json(data / "agent_health.json", {})
     fails = int(agent.get("consecutive_failures", 0))
     if fails >= 3:
         since = _hours_since(agent.get("last_success"))
@@ -50,67 +48,100 @@ def health_warnings() -> list[str]:
     return warnings
 
 
-HTML = """<!doctype html><meta name="viewport" content="width=device-width"><title>Job Monitor Tracker</title><style>
-:root{color-scheme:light}body{font:15px system-ui;margin:0;background:#f4f7f9;color:#14202b}.wrap{max-width:1180px;margin:32px auto;padding:0 18px}header{display:flex;justify-content:space-between;align-items:end;gap:16px}.counts{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0}.pill{background:white;border:1px solid #ccd7df;border-radius:999px;padding:8px 12px}.toolbar{display:flex;gap:10px;margin-bottom:16px}.toolbar input,.toolbar select{padding:10px;border:1px solid #b8c6d0;border-radius:8px;background:white}article{background:white;border:1px solid #ccd7df;border-radius:12px;padding:18px;margin:12px 0;box-shadow:0 2px 8px #17324d0a}.priority{border:2px solid #d59600;background:#fffaf0}.priority-label{display:inline-block;background:#9b6500;color:white;border-radius:999px;padding:5px 9px;font-weight:700}.unverified{background:#9a4b16}.top{display:flex;justify-content:space-between;gap:16px}.score{font-size:22px;font-weight:750}.status{text-transform:capitalize;border-radius:999px;background:#e6f0f7;padding:5px 9px;white-space:nowrap}small,.muted{color:#627482}button,.link{display:inline-block;margin:5px 6px 0 0;padding:8px 10px;border:0;border-radius:7px;background:#e7edf2;color:#14202b;text-decoration:none;cursor:pointer}.primary{background:#124e78;color:white}details{margin-top:9px}.banner{background:#fbe9e7;border:1px solid #e0a89a;border-radius:10px;padding:10px 14px;margin:16px 0}.banner b{color:#8a2b12}@media(max-width:650px){header,.top{align-items:start;flex-direction:column}.toolbar{flex-direction:column}}
-</style><div class=wrap><header><div><h1>Internship Application Tracker</h1><div class=muted>Cloud queue + Apple Mail status updates · {{total}} tracked</div></div><div class=muted>Updated {{updated}}</div></header>
-{% if warnings %}<div class=banner><b>Service check:</b><ul>{% for w in warnings %}<li>{{w}}</li>{% endfor %}</ul></div>{% endif %}
-<div class=counts>{% for name,count in counts.items() %}<span class=pill>{{name|capitalize}}: <b>{{count}}</b></span>{% endfor %}</div>
-<form class=toolbar method=get><input name=q value="{{query}}" placeholder="Search company or role"><select name=stage><option value="">All applications</option>{% for s in stages %}<option value="{{s}}" {{'selected' if stage==s else ''}}>{{s|capitalize}}</option>{% endfor %}</select><button class=primary>Filter</button>{% if query or stage %}<a class=link href="/">Clear filter</a>{% endif %}</form>
-{% for j in items %}<article class="{{'priority' if j.priority_program else ''}}"><div class=top><div>{% if j.priority_program %}<span class="priority-label {{'unverified' if not j.priority_program.official_source else ''}}">Priority: {{j.priority_program.name}} · {{'Official source' if j.priority_program.official_source else 'Verify source'}}</span>{% endif %}<div class=score>{{j.assessment.score}}{% if j.assessment.score != '—' %}/100{% endif %}</div><h2>{{j.company}} — {{j.title}}</h2><div class=muted>{{j.location}}</div></div><span class=status>{{j.status}} · {{j.status_source}}</span></div>
-{% if j.assessment.reasons %}<p>{{j.assessment.reasons|join(' · ')}}</p>{% endif %}{% if j.assessment.flags %}<p><b>Verify:</b> {{j.assessment.flags|join(' · ')}}</p>{% endif %}
-{% if j.url %}<a class="link primary" href="{{j.url}}" target=_blank>Open application</a>{% endif %}<form style="display:inline" method=post action="/status/{{j.key}}">{% for s in stages %}<button name=status value="{{s}}">{{s|capitalize}}</button>{% endfor %}</form>
-{% if j.events %}<details><summary>{{j.events|length}} mailbox update(s)</summary>{% for e in j.events %}<p><b>{{e.stage|capitalize}}</b> · {{e.date}}<br>{{e.subject}}<br><small>{{e.mailbox_account}}</small></p>{% endfor %}</details>{% endif %}</article>{% else %}<article>No applications match this filter.</article>{% endfor %}</div>"""
-
-
-def tracker_items():
-    return merge_tracker(
-        load_json(QUEUE, {"jobs": []}), load_json(HISTORY, {"applications": []}), load_json(STATUS, {})
+def create_app(data_dir: Path | None = None) -> Flask:
+    app = Flask(__name__, static_folder=str(WEB / "assets"), static_url_path="/assets")
+    app.config.update(
+        SECRET_KEY=secrets.token_hex(32),
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE="Strict",
+        TRUSTED_HOSTS=["localhost", "127.0.0.1", "[::1]"],
+        MAX_CONTENT_LENGTH=16_384,
     )
-
-
-@app.get("/")
-def index():
-    all_items, query, stage = (
-        tracker_items(),
-        request.args.get("q", "").strip().lower(),
-        request.args.get("stage", ""),
+    data = (
+        Path(data_dir)
+        if data_dir is not None
+        else Path(
+            os.environ.get("JOB_MONITOR_LOCAL_DIR", Path.home() / "Library/Application Support/JobMonitor")
+        )
     )
-    counts = {name: sum(item.get("status") == name for item in all_items) for name in STAGE_ORDER}
-    items = [
-        item
-        for item in all_items
-        if not query or query in f"{item.get('company', '')} {item.get('title', '')}".lower()
-    ]
-    if stage:
-        items = [item for item in items if item.get("status") == stage]
-    updated = (
-        datetime.fromtimestamp(QUEUE.stat().st_mtime).strftime("%b %d, %I:%M %p")
-        if QUEUE.exists()
-        else "waiting for first sync"
-    )
-    return render_template_string(
-        HTML,
-        items=items,
-        total=len(all_items),
-        counts=counts,
-        stages=list(STAGE_ORDER),
-        query=query,
-        stage=stage,
-        updated=updated,
-        warnings=health_warnings(),
-    )
+    queue_path = data / "review_queue.json"
+    status_path = data / "status.json"
+
+    def tracker_items():
+        return merge_tracker(
+            load_json(queue_path, {"jobs": []}),
+            load_json(data / "application_history.json", {"applications": []}),
+            load_json(status_path, {}),
+        )
+
+    def snapshot():
+        try:
+            updated = datetime.fromtimestamp(queue_path.stat().st_mtime, timezone.utc).isoformat()
+        except FileNotFoundError:
+            updated = None
+        return {
+            "items": tracker_items(),
+            "stages": list(STAGE_ORDER),
+            "snapshot_at": datetime.now(timezone.utc).isoformat(),
+            "queue_updated_at": updated,
+            "warnings": health_warnings(data),
+        }
+
+    @app.after_request
+    def response_headers(response):
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        return response
+
+    @app.get("/")
+    def index():
+        return send_from_directory(WEB, "index.html")
+
+    @app.get("/bootstrap.js")
+    def bootstrap():
+        token = session.setdefault("csrf_token", secrets.token_urlsafe(32))
+        body = "window.TRACKER_BOOTSTRAP = " + json.dumps({"mode": "local", "csrfToken": token}) + ";"
+        return app.response_class(body, mimetype="text/javascript")
+
+    @app.get("/api/tracker")
+    def get_tracker():
+        return jsonify(snapshot())
+
+    @app.post("/api/status/<key>")
+    @app.post("/status/<key>")
+    def update(key):
+        payload = request.get_json(silent=True) if request.is_json else request.form
+        if not isinstance(payload, dict) and request.is_json:
+            return jsonify(error="Expected a JSON object."), 400
+        payload = payload or {}
+        expected = session.get("csrf_token")
+        supplied = request.headers.get("X-CSRF-Token") or payload.get("csrf_token", "")
+        if not expected or not isinstance(supplied, str) or not secrets.compare_digest(expected, supplied):
+            return jsonify(error="Session expired. Reload this page before saving."), 403
+        status = payload.get("status")
+        if not isinstance(status, str) or status not in STAGE_ORDER:
+            return jsonify(error="Choose a valid application status."), 400
+        if not any(item["key"] == key for item in tracker_items()):
+            return jsonify(error="This record is no longer available. Refresh your tracker."), 404
+        try:
+            save_status(status_path, key, status)
+        except OSError:
+            app.logger.exception("Could not save tracker status")
+            return jsonify(error="Status could not be saved. Your previous status is unchanged."), 500
+        if request.path.startswith("/api/"):
+            return jsonify(snapshot())
+        return redirect("/")
+
+    @app.get("/health")
+    def health():
+        return {"ok": True, "items": len(tracker_items())}
+
+    return app
 
 
-@app.post("/status/<key>")
-def update(key):
-    save_status(STATUS, key, request.form["status"])
-    return redirect(request.referrer or "/")
-
-
-@app.get("/health")
-def health():
-    return {"ok": True, "items": len(tracker_items())}
-
+app = create_app()
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=8765)
