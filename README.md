@@ -164,6 +164,8 @@ MIT — see [LICENSE](LICENSE).
 
 ## Interactive dashboard and public demo
 
+**[Open the fictional public demo](https://iamjeshurun.github.io/internship-monitor/)** · Hosted on GitHub Pages.
+
 The dashboard uses the same interface in two modes:
 
 - **Public demo:** `web/` contains a static site with 16 explicitly fictional records. Board, table, activity, search, stage filters, match explanations, priority labels and status changes work in the browser. Reloading or choosing **Reset demo** restores the fixtures. It never calls a local tracker, a mailbox, or a remote API.
@@ -176,7 +178,7 @@ python scripts/build_demo.py
 python -m http.server 8795 --bind 127.0.0.1 --directory web
 ```
 
-Open `http://127.0.0.1:8795`. This is a local preview, not a published demo URL. The `web/` directory is ready for static hosting, including GitHub Pages under a repository subpath; publishing is a separate step. Do not upload the repository root or local runtime data.
+Open `http://127.0.0.1:8795`. This is a local preview. The public demo is deployed by `.github/workflows/pages.yml` on pushes to `main`, after the tracker tests and fictional-fixture checks pass. The workflow publishes only `web/`; it never uploads the repository root or local runtime data.
 
 The opening uses current-stage counts, not a claim about past stage transitions. Decorative motion repeats every five seconds while the opening is visible, pauses in background tabs, supports a pause control, and respects reduced-motion preferences. Activity dates are mailbox-message dates, not interview appointments. Match scores describe profile fit, not hiring probabilities.
 
