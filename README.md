@@ -8,15 +8,17 @@ A human-in-the-loop internship discovery and application-tracking system: a clou
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
-pytest -q                 # 109 tests, incl. fault-injection cases
+pytest -q                 # Python tests, incl. fault-injection cases
 python src/run_monitor.py # polls public boards, scores, writes data/ (notifications skipped without secrets)
 ```
 
 Architecture, design decisions, reliability findings, and known limitations: **[docs/ENGINEERING_LOG.md](docs/ENGINEERING_LOG.md)**.
 
+**[Try the fictional public demo](https://iamjeshurun.github.io/internship-monitor/)**: the tracker dashboard with 16 made-up records, scored by the real scoring code. Details in [Interactive dashboard and public demo](#interactive-dashboard-and-public-demo).
+
 ---
 
-Cloud discovery on GitHub Actions, native review notifications on macOS, and human-reviewed application preparation. 
+Cloud discovery on GitHub Actions, native review notifications on macOS, and human-reviewed application preparation.
 
 ## Safety and operating boundary
 
@@ -122,7 +124,19 @@ export JOB_MONITOR_GITHUB_TOKEN="fine-grained-read-only-token"
 python mac/mac_agent.py
 ```
 
-Store the token in macOS Keychain or another credential manager before enabling the LaunchAgents. The installer creates the queue poller, always-on dashboard, and 15-minute mailbox sync. The Mac catches up after sleep; the two-hour GitHub search continues while it is offline.
+Store the token in macOS Keychain or another credential manager before enabling the LaunchAgents. The installer creates the queue poller, always-on dashboard, and 15-minute mailbox sync. The Mac catches up after sleep; the scheduled GitHub search continues while it is offline.
+
+### Keeping cloud polling on schedule
+
+GitHub delays scheduled workflows on quiet repositories. A private instance set to run every two hours was observed running only every five to nine hours. The optional `com.jobmonitor.dispatch` agent (`mac/dispatch_monitor.py`) fixes this while the Mac is awake: every ten minutes it checks the private repository's latest **Job Monitor** run and, if none is queued or running and the newest started more than 115 minutes ago, starts one with `gh workflow run`. The cron schedule remains the fallback while the Mac sleeps.
+
+It uses the GitHub CLI's own login (`gh auth login`, which needs the `workflow` scope), not the read-only token above. `mac/install.sh` writes its LaunchAgent; load it with:
+
+```bash
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.jobmonitor.dispatch.plist
+```
+
+`JOB_MONITOR_WORKFLOW` (default `monitor.yml`) and `JOB_MONITOR_MAX_AGE_MINUTES` (default `115`) adjust it. Its log is `~/Library/Logs/job-monitor-dispatch.log`.
 
 ## Existing applications (Apple Mail)
 
@@ -158,17 +172,13 @@ The generated packet separates safe saved answers from questions requiring revie
 
 `safari/job-monitor-autofill.user.js` runs through the lightweight Userscripts app; Xcode is not required. Save only basic identity fields, then click **Review Autofill** while reviewing an application. Teal fields were filled automatically; orange fields require review. It has no submit capability and stores its small identity profile only in the userscript manager. Do not place passwords, government identifiers, or demographic answers in it.
 
-## License
-
-MIT — see [LICENSE](LICENSE).
-
 ## Interactive dashboard and public demo
 
 **[Open the fictional public demo](https://iamjeshurun.github.io/internship-monitor/)** · Hosted on GitHub Pages.
 
 The dashboard uses the same interface in two modes:
 
-- **Public demo:** `web/` contains a static site with 16 explicitly fictional records. Board, table, activity, search, stage filters, match explanations, priority labels and status changes work in the browser. Reloading or choosing **Reset demo** restores the fixtures. It never calls a local tracker, a mailbox, or a remote API.
+- **Public demo:** `web/` contains a static site with 16 explicitly fictional records. Their scores, match reasons and flags are produced by the real scorer (`src/scoring.py`) against the example profile in `config/resume_profile.yaml`, so they look exactly like a live run. Board, table, activity, search, stage filters, match explanations, priority labels and status changes work in the browser. Reloading or choosing **Reset demo** restores the fixtures. It never calls a local tracker, a mailbox, or a remote API.
 - **Local tracker:** `python mac/dashboard.py` serves that interface at `http://127.0.0.1:8765`. It reads the existing queue, mailbox history and manual statuses, and saves changes through Flask. Mailbox/agent health warnings remain visible. Records refresh every minute while the page is visible and no detail panel is open, or on **Refresh records**.
 
 Preview the public demo from the repository root:
@@ -182,7 +192,7 @@ Open `http://127.0.0.1:8795`. This is a local preview. The public demo is deploy
 
 The opening uses current-stage counts, not a claim about past stage transitions. Decorative motion repeats every five seconds while the opening is visible, pauses in background tabs, supports a pause control, and respects reduced-motion preferences. Activity dates are mailbox-message dates, not interview appointments. Match scores describe profile fit, not hiring probabilities.
 
-The demo is generated only from `demo/fixtures.json` through the real `merge_tracker()` function; the builder never reads `JOB_MONITOR_LOCAL_DIR` or personal files. Run `python scripts/build_demo.py --check` to verify the committed bootstrap matches those fixtures. Edit the fixtures and regenerate instead of editing `web/bootstrap.js`.
+The demo is generated only from `demo/fixtures.json` (fictional postings, mailbox events and statuses) through the real `assess()`, `classify_priority()` and `merge_tracker()` functions; the builder never reads `JOB_MONITOR_LOCAL_DIR` or personal files. Run `python scripts/build_demo.py --check` to verify the committed bootstrap matches those fixtures. Edit the fixtures and regenerate instead of editing `web/bootstrap.js`.
 
 The local JSON interface is `GET /api/tracker` and `POST /api/status/<key>`. Saves require the current browser session's CSRF token from `/bootstrap.js`, a known record key and one of the eight supported stages. The existing form route `/status/<key>` remains available with a `csrf_token` field. Ready/Reviewing remain subject to existing mailbox-stage precedence; the UI displays the resolved backend state after a save. The local service stays bound to loopback and is not a public multi-user backend.
 
@@ -197,3 +207,7 @@ python scripts/build_demo.py --check
 ```
 
 The frontend tests compare all 128 demo record/status combinations against the actual Python merger, including mailbox-only records, manual precedence, preserved mailbox events and safe rendering of untrusted text/links. Node 22+ is needed for these tests, not to run or host the dashboard.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

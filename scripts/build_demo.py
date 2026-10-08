@@ -1,4 +1,10 @@
-"""Build the public, fictional bootstrap from checked-in fixtures only."""
+"""Build the public, fictional bootstrap from checked-in fixtures only.
+
+Fixture postings carry no scores. Each one is scored here by the real
+``scoring.assess`` against the example profile in ``config/resume_profile.yaml``
+and checked for named programs by the real ``priority.classify_priority``, so
+the demo's match reasons and flags are what the pipeline would produce.
+"""
 
 from __future__ import annotations
 
@@ -7,14 +13,42 @@ import json
 import sys
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "mac"))
+sys.path.insert(0, str(ROOT / "src"))
 from tracker import STAGE_ORDER, merge_tracker
+
+from priority import classify_priority
+from scoring import assess
+
+
+def scored_queue(fixtures: dict) -> dict:
+    profile = yaml.safe_load((ROOT / "config/resume_profile.yaml").read_text())
+    companies, programs = fixtures.get("companies", {}), fixtures.get("priority_programs", {})
+    jobs = []
+    for posting in fixtures["queue"]["jobs"]:
+        job = dict(posting)
+        assessment = assess(job, profile, companies.get(job["company"]))
+        if not assessment.eligible or assessment.score < assessment.notify_threshold:
+            raise SystemExit(f"{job['key']} would not reach the review queue: {assessment.blockers}")
+        job["assessment"] = {
+            "score": assessment.score,
+            "reasons": assessment.reasons,
+            "flags": assessment.flags,
+        }
+        program = classify_priority(job, programs)
+        if program:
+            job["priority_program"] = program
+        job.pop("description", None)
+        jobs.append(job)
+    return {"jobs": jobs}
 
 
 def build() -> str:
     fixtures = json.loads((ROOT / "demo/fixtures.json").read_text())
-    items = merge_tracker(fixtures["queue"], fixtures["history"], fixtures["statuses"])
+    items = merge_tracker(scored_queue(fixtures), fixtures["history"], fixtures["statuses"])
     payload = {
         "mode": "demo",
         "snapshot": {

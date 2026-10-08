@@ -17,6 +17,10 @@ const content = $('.content');
 const flow = $('.flow');
 const isDemo = boot?.mode === 'demo';
 const statusMessage = message => { $('#announce').textContent = message; };
+const shortDate = iso => {
+  const date = new Date(iso || '');
+  return Number.isNaN(date.getTime()) ? 'date unavailable' : date.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'});
+};
 const dateLabel = iso => {
   if (!iso) return 'Not recorded';
   const date = new Date(iso);
@@ -68,7 +72,7 @@ async function load(animate = false) {
   } catch (error) {
     const notice = $('#load-error');
     notice.hidden = false;
-    notice.innerHTML = `${snapshot ? 'Showing the last loaded records. ' : ''}${esc(error.message)} <button class="ghost">Try again ↗</button>`;
+    notice.innerHTML = `${snapshot ? 'Showing the last loaded records. ' : ''}${esc(error.message)} <button class="ghost">Try again</button>`;
     notice.querySelector('button').onclick = () => load();
     content.setAttribute('aria-busy', 'false');
     if (!snapshot) content.innerHTML = '<div class="empty">Your records will appear when the tracker is available.</div>';
@@ -92,7 +96,7 @@ function card(item) {
     <div class="role">${esc(item.title)}</div><div class="location">${view === 'table' ? label(item.status) + ' · ' : ''}${esc(item.location || 'Location not recorded')}</div>
     <div class="scoreline"><strong>${esc(score)}</strong><span>${esc(sourceLabel(item.status_source))}</span></div>
     ${flags.length ? `<div class="flag">Verify: ${esc(flags[0].replace(/^verify\s+/i, ''))}</div>` : ''}
-    <div class="next"><span>${item.last_update ? 'Email · ' + esc(item.last_update) : 'Discovered · ' + esc(item.first_seen?.slice(0, 10) || 'date unavailable')}</span><span aria-hidden="true">↗</span></div>`;
+    <div class="next"><span>${item.last_update ? 'Email · ' + esc(item.last_update) : 'Discovered · ' + esc(shortDate(item.first_seen))}</span><span aria-hidden="true">→</span></div>`;
   return node;
 }
 
@@ -151,9 +155,8 @@ function summaries() {
     captions.children[i].setAttribute('aria-label', `Show ${name}: ${count} records`);
   });
   const bars = $('.bars');
-  if (!bars.children.length) STAGES.forEach(() => bars.append(document.createElement('span')));
   const max = Math.max(1, ...Object.values(counts));
-  STAGES.forEach((s, i) => { bars.children[i].style.height = `${counts[s] / max * 100}%`; });
+  bars.innerHTML = STAGES.map(s => `<div class="barrow" aria-hidden="true"><span>${label(s)}</span><i style="width:${counts[s] / max * 100}%"></i><b>${counts[s]}</b></div>`).join('');
   bars.setAttribute('aria-label', STAGES.map(s => `${label(s)}: ${counts[s]}`).join(', '));
   const ready = items.filter(item => item.status === 'ready');
   $('.signal').innerHTML = `<b>${ready.length} matches ready for review.</b> ${ready.filter(item => item.assessment?.flags?.length).length} with verification flags. Match scores describe profile fit, not hiring probability.`;
@@ -174,13 +177,16 @@ function drawJourney(animate = true) {
   flow.setAttribute('viewBox', `0 0 ${width} ${height}`);
   flow.style.height = `${height}px`;
   const ns = 'http://www.w3.org/2000/svg';
+  // Each group's points sit directly above its caption.
+  const flowLeft = flow.getBoundingClientRect().left, radius = width < 650 ? 2.5 : 4;
+  const columnX = [...$('.stagecaptions').children].map(caption => caption.getBoundingClientRect().left - flowLeft + radius);
   const drawn = groups.flatMap(([, statuses], group) => snapshot.items.filter(item => statuses.includes(item.status)).slice(0, 40).map((item, row, peers) => ({item, group, row, size: peers.length})));
   drawn.forEach(({group, row, size}, i) => {
-    const x = width * (.065 + group * .265), y = 18 + row * Math.min(18, (height - 36) / Math.max(1, size - 1));
+    const x = columnX[group] ?? width * (.08 + group * .23), y = 18 + row * Math.min(18, (height - 36) / Math.max(1, size - 1));
     const startY = 12 + i / Math.max(1, drawn.length - 1) * (height - 24);
     const path = document.createElementNS(ns, 'path');
     path.setAttribute('d', `M 5 ${startY} C ${x * .42} ${startY}, ${x * .65} ${y}, ${x} ${y}`); flow.append(path);
-    const dot = document.createElementNS(ns, 'circle'); dot.setAttribute('r', width < 650 ? '2.5' : '4'); dot.setAttribute('cx', x); dot.setAttribute('cy', y); flow.append(dot);
+    const dot = document.createElementNS(ns, 'circle'); dot.setAttribute('r', radius); dot.setAttribute('cx', x); dot.setAttribute('cy', y); flow.append(dot);
     if (animate && motionAllowed()) {
       const length = path.getTotalLength(), delay = Math.min(i * 25, 375);
       const options = {duration: 1400, delay, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both'};

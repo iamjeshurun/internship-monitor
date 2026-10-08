@@ -10,14 +10,8 @@
         "url": "https://example.com/jobs/DEMO-100",
         "first_seen": "2026-10-01T12:00:00+00:00",
         "source": "fictional_board",
-        "assessment": {
-          "score": 91,
-          "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
-          ],
-          "flags": []
-        }
+        "description": "Summer 2027 internship on the forecasting team. You will build demand models in Python and SQL with pandas and present results to product managers. Coursework in machine learning is a plus.",
+        "age_hours": 30
       },
       {
         "key": "demo-01",
@@ -27,14 +21,8 @@
         "url": "https://example.com/jobs/DEMO-101",
         "first_seen": "2026-10-02T12:00:00+00:00",
         "source": "fictional_board",
-        "assessment": {
-          "score": 86,
-          "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
-          ],
-          "flags": []
-        }
+        "description": "Join the growth analytics group for a 2027 internship. Write SQL against our warehouse, analyze experiments in Python and pandas, and help the data science team test machine learning features. Code lives in git.",
+        "age_hours": 70
       },
       {
         "key": "demo-02",
@@ -44,14 +32,8 @@
         "url": "https://example.com/jobs/DEMO-102",
         "first_seen": "2026-10-03T12:00:00+00:00",
         "source": "fictional_board",
-        "assessment": {
-          "score": 88,
-          "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
-          ],
-          "flags": []
-        }
+        "description": "Summer 2027 software engineering intern on the payments platform. Build backend services in Java and Python, write tests and ship to production with a mentor. Familiarity with REST API design and databases is useful.",
+        "age_hours": 50
       },
       {
         "key": "demo-03",
@@ -61,20 +43,8 @@
         "url": "https://example.com/jobs/DEMO-103",
         "first_seen": "2026-10-04T12:00:00+00:00",
         "source": "fictional_board",
-        "assessment": {
-          "score": 94,
-          "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
-          ],
-          "flags": [
-            "Verify graduation window"
-          ]
-        },
-        "priority_program": {
-          "name": "Summer 2027 cohort",
-          "official_source": true
-        }
+        "description": "Orbit Launch is our paid program for first- and second-year students. Summer 2027 data engineering interns build pipelines in Python and SQL, model data for analytics and learn how a production database is run.",
+        "age_hours": 10
       },
       {
         "key": "demo-04",
@@ -84,35 +54,19 @@
         "url": "https://example.com/jobs/DEMO-104",
         "first_seen": "2026-10-05T12:00:00+00:00",
         "source": "fictional_board",
-        "assessment": {
-          "score": 84,
-          "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
-          ],
-          "flags": []
-        }
+        "description": "Research internship with the applied NLP group. Fine-tune BERT models, clean datasets in Python, pandas and SQL, and compare machine learning approaches with our data science and artificial intelligence teams. Start date is flexible.",
+        "age_hours": 18
       },
       {
         "key": "demo-05",
         "company": "Aster",
         "title": "ML Engineering Intern",
         "location": "San Francisco, CA",
-        "url": "https://example.com/jobs/DEMO-105",
+        "url": "https://jobs.example.net/aster/DEMO-105",
         "first_seen": "2026-10-01T12:00:00+00:00",
         "source": "fictional_board",
-        "assessment": {
-          "score": 90,
-          "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
-          ],
-          "flags": []
-        },
-        "priority_program": {
-          "name": "Summer 2027 cohort",
-          "official_source": false
-        }
+        "description": "Aster Fellows: a Summer 2027 machine learning engineering internship. Train and evaluate models in Python with TensorFlow, deploy them behind a FastAPI service and work with the health data team.",
+        "age_hours": 6
       },
       {
         "key": "demo-06",
@@ -122,14 +76,8 @@
         "url": "https://example.com/jobs/DEMO-106",
         "first_seen": "2026-10-02T12:00:00+00:00",
         "source": "fictional_board",
-        "assessment": {
-          "score": 83,
-          "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
-          ],
-          "flags": []
-        }
+        "description": "Spring 2027 analytics intern for the risk team. Use SQL, R and Python to monitor portfolio exposure and build reports in a quantitative environment.",
+        "age_hours": 120
       },
       {
         "key": "demo-07",
@@ -139,16 +87,8 @@
         "url": "https://example.com/jobs/DEMO-107",
         "first_seen": "2026-10-03T12:00:00+00:00",
         "source": "fictional_board",
-        "assessment": {
-          "score": 79,
-          "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
-          ],
-          "flags": [
-            "Verify graduation window"
-          ]
-        }
+        "description": "Product internship, Summer 2027. Talk to customers, write specs in Figma and work with engineers on analytics features, a public API and machine learning recommendations. Comfort with SQL or Python helps.",
+        "age_hours": 40
       },
       {
         "key": "demo-09",
@@ -158,14 +98,8 @@
         "url": "https://example.com/jobs/DEMO-109",
         "first_seen": "2026-10-05T12:00:00+00:00",
         "source": "fictional_board",
-        "assessment": {
-          "score": 82,
-          "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
-          ],
-          "flags": []
-        }
+        "description": "Summer 2027 data analyst intern. Build dashboards, write SQL and automate reporting in Python, pandas, R and VBA for the finance team's analytics and data science group.",
+        "age_hours": 150
       },
       {
         "key": "demo-10",
@@ -175,14 +109,8 @@
         "url": "https://example.com/jobs/DEMO-110",
         "first_seen": "2026-10-01T12:00:00+00:00",
         "source": "fictional_board",
-        "assessment": {
-          "score": 87,
-          "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
-          ],
-          "flags": []
-        }
+        "description": "Research intern on the quantitative research team, Summer 2027. Prototype trading signals in Python and pandas, test them against historical data and present findings.",
+        "age_hours": 80
       },
       {
         "key": "demo-12",
@@ -192,14 +120,8 @@
         "url": "https://example.com/jobs/DEMO-112",
         "first_seen": "2026-10-03T12:00:00+00:00",
         "source": "fictional_board",
-        "assessment": {
-          "score": 74,
-          "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
-          ],
-          "flags": []
-        }
+        "description": "Summer 2027 business intelligence internship. Maintain SQL reports, automate them in Python, pandas and VBA, and support analytics for the operations team.",
+        "age_hours": 20
       },
       {
         "key": "demo-13",
@@ -209,33 +131,19 @@
         "url": "https://example.com/jobs/DEMO-113",
         "first_seen": "2026-10-04T12:00:00+00:00",
         "source": "fictional_board",
-        "assessment": {
-          "score": 89,
-          "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
-          ],
-          "flags": []
-        }
+        "description": "Summer 2027 data science intern in health tech. Analyze patient-experience survey data with Python, pandas and SQL and build machine learning models to flag follow-up needs.",
+        "age_hours": 14
       },
       {
         "key": "demo-14",
         "company": "Terrace",
-        "title": "Software Intern",
+        "title": "Software Developer Intern",
         "location": "New York, NY",
         "url": "https://example.com/jobs/DEMO-114",
         "first_seen": "2026-10-05T12:00:00+00:00",
         "source": "fictional_board",
-        "assessment": {
-          "score": 85,
-          "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
-          ],
-          "flags": [
-            "Verify graduation window"
-          ]
-        }
+        "description": "Developer internship building internal tools in JavaScript, React and Node.js, with a Django backend, a Python API layer, SQL storage and HTML/CSS front ends. We hire interns year round.",
+        "age_hours": 60
       },
       {
         "key": "demo-15",
@@ -245,14 +153,8 @@
         "url": "https://example.com/jobs/DEMO-115",
         "first_seen": "2026-10-01T12:00:00+00:00",
         "source": "fictional_board",
-        "assessment": {
-          "score": 80,
-          "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
-          ],
-          "flags": []
-        }
+        "description": "Summer 2027 product analytics internship. Instrument features, analyze funnels in SQL, Python and pandas, keep analysis code in git and share data science and machine learning findings with design and engineering.",
+        "age_hours": 100
       }
     ]
   },
@@ -451,6 +353,49 @@
       "status": "reviewing",
       "source": "manual",
       "updated_at": "2026-10-07T15:00:00+00:00"
+    }
+  },
+  "priority_programs": {
+    "orbit_launch": {
+      "name": "Orbit Launch (fictional)",
+      "companies": [
+        "Orbit Labs"
+      ],
+      "aliases": [
+        "orbit launch"
+      ],
+      "official_domains": [
+        "example.com"
+      ]
+    },
+    "aster_fellows": {
+      "name": "Aster Fellows (fictional)",
+      "companies": [
+        "Aster"
+      ],
+      "aliases": [
+        "aster fellows"
+      ],
+      "official_domains": [
+        "aster.example.com"
+      ]
+    }
+  },
+  "companies": {
+    "Orbit Labs": {
+      "priority": "Target"
+    },
+    "Meridian": {
+      "priority": "Target"
+    },
+    "Northstar": {
+      "priority": "Standard"
+    },
+    "Waymark": {
+      "priority": "Standard"
+    },
+    "Sonder Labs": {
+      "priority": "Reach"
     }
   }
 }

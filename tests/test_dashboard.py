@@ -134,3 +134,26 @@ def test_empty_install_does_not_create_private_data(tmp_path):
     assert payload["items"] == []
     assert payload["queue_updated_at"] is None
     assert not folder.exists()
+
+
+def test_demo_scores_come_from_the_real_scorer():
+    import sys
+
+    import yaml
+
+    sys.path.insert(0, str(FIXTURES.parent.parent / "scripts"))
+    sys.path.insert(0, str(FIXTURES.parent.parent / "src"))
+    from build_demo import scored_queue
+
+    from scoring import assess
+
+    fixture = json.loads(FIXTURES.read_text())
+    profile = yaml.safe_load((FIXTURES.parent.parent / "config/resume_profile.yaml").read_text())
+    queue = scored_queue(fixture)
+    assert len(queue["jobs"]) == len(fixture["queue"]["jobs"])
+    for posting, job in zip(fixture["queue"]["jobs"], queue["jobs"]):
+        assert "assessment" not in posting, "fixtures hold postings, not scores"
+        expected = assess(posting, profile, fixture["companies"].get(posting["company"]))
+        assert job["assessment"]["score"] == expected.score >= expected.notify_threshold
+        assert job["assessment"]["reasons"] == expected.reasons
+        assert "description" not in job

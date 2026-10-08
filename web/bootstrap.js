@@ -4,13 +4,16 @@ window.TRACKER_BOOTSTRAP = {
   "snapshot": {
     "items": [
       {
+        "age_hours": 20,
         "assessment": {
           "flags": [],
           "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
+            "target term: summer 2027",
+            "skills: python, sql, vba, pandas, analytics",
+            "location: Remote US",
+            "posted within 24 hours"
           ],
-          "score": 74
+          "score": 46
         },
         "company": "Folio",
         "first_seen": "2026-10-03T12:00:00+00:00",
@@ -101,13 +104,16 @@ window.TRACKER_BOOTSTRAP = {
         "url": ""
       },
       {
+        "age_hours": 70,
         "assessment": {
           "flags": [],
           "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
+            "target term: 2027 internship",
+            "skills: python, sql, pandas, git, data science, machine learning",
+            "location: Remote US",
+            "posted within 7 days"
           ],
-          "score": 86
+          "score": 48
         },
         "company": "Forma",
         "events": [
@@ -145,13 +151,17 @@ window.TRACKER_BOOTSTRAP = {
         "url": "https://example.com/jobs/DEMO-101"
       },
       {
+        "age_hours": 30,
         "assessment": {
           "flags": [],
           "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
+            "target term: summer 2027",
+            "role match: data science",
+            "skills: python, sql, pandas, data science, machine learning",
+            "company priority: Standard",
+            "posted within 7 days"
           ],
-          "score": 91
+          "score": 47
         },
         "company": "Northstar",
         "events": [
@@ -189,13 +199,18 @@ window.TRACKER_BOOTSTRAP = {
         "url": "https://example.com/jobs/DEMO-100"
       },
       {
+        "age_hours": 50,
         "assessment": {
           "flags": [],
           "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
+            "target term: summer 2027",
+            "role match: software engineering",
+            "skills: python, java, backend, api",
+            "location: New York",
+            "company priority: Target",
+            "posted within 7 days"
           ],
-          "score": 88
+          "score": 63
         },
         "company": "Meridian",
         "events": [
@@ -233,13 +248,16 @@ window.TRACKER_BOOTSTRAP = {
         "url": "https://example.com/jobs/DEMO-102"
       },
       {
+        "age_hours": 6,
         "assessment": {
           "flags": [],
           "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
+            "target term: summer 2027",
+            "skills: python, tensorflow, fastapi, health data, machine learning",
+            "location: California",
+            "posted within 24 hours"
           ],
-          "score": 90
+          "score": 54
         },
         "company": "Aster",
         "events": [
@@ -271,23 +289,28 @@ window.TRACKER_BOOTSTRAP = {
         "last_update": "Oct 4, 2026",
         "location": "San Francisco, CA",
         "priority_program": {
-          "name": "Summer 2027 cohort",
+          "id": "aster_fellows",
+          "matched_alias": "aster fellows",
+          "name": "Aster Fellows (fictional)",
           "official_source": false
         },
         "source": "fictional_board",
         "status": "assessment",
         "status_source": "email",
         "title": "ML Engineering Intern",
-        "url": "https://example.com/jobs/DEMO-105"
+        "url": "https://jobs.example.net/aster/DEMO-105"
       },
       {
+        "age_hours": 100,
         "assessment": {
           "flags": [],
           "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
+            "target term: summer 2027",
+            "skills: python, sql, pandas, git, data science, machine learning",
+            "location: Remote US",
+            "posted within 7 days"
           ],
-          "score": 80
+          "score": 48
         },
         "company": "Daybreak",
         "events": [
@@ -314,13 +337,16 @@ window.TRACKER_BOOTSTRAP = {
         "url": "https://example.com/jobs/DEMO-115"
       },
       {
+        "age_hours": 120,
         "assessment": {
           "flags": [],
           "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
+            "target term: spring 2027",
+            "skills: python, sql, r, quantitative, analytics, risk",
+            "location: Chicago",
+            "posted within 7 days"
           ],
-          "score": 83
+          "score": 54
         },
         "company": "Parallel",
         "events": [
@@ -347,13 +373,18 @@ window.TRACKER_BOOTSTRAP = {
         "url": "https://example.com/jobs/DEMO-106"
       },
       {
+        "age_hours": 80,
         "assessment": {
           "flags": [],
           "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
+            "target term: summer 2027",
+            "role match: research intern",
+            "skills: python, pandas, quantitative, trading",
+            "location: New York",
+            "company priority: Reach",
+            "posted within 7 days"
           ],
-          "score": 87
+          "score": 55
         },
         "company": "Sonder Labs",
         "events": [
@@ -380,13 +411,16 @@ window.TRACKER_BOOTSTRAP = {
         "url": "https://example.com/jobs/DEMO-110"
       },
       {
+        "age_hours": 150,
         "assessment": {
           "flags": [],
           "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
+            "target term: summer 2027",
+            "skills: python, sql, r, vba, pandas, data science",
+            "location: Remote US",
+            "posted within 7 days"
           ],
-          "score": 82
+          "score": 48
         },
         "company": "Latticeworks",
         "events": [
@@ -413,15 +447,16 @@ window.TRACKER_BOOTSTRAP = {
         "url": "https://example.com/jobs/DEMO-109"
       },
       {
+        "age_hours": 40,
         "assessment": {
-          "flags": [
-            "Verify graduation window"
-          ],
+          "flags": [],
           "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
+            "target term: summer 2027",
+            "skills: python, sql, figma, machine learning, analytics, api",
+            "location: Texas",
+            "posted within 7 days"
           ],
-          "score": 79
+          "score": 50
         },
         "company": "Kindred",
         "first_seen": "2026-10-03T12:00:00+00:00",
@@ -434,15 +469,18 @@ window.TRACKER_BOOTSTRAP = {
         "url": "https://example.com/jobs/DEMO-107"
       },
       {
+        "age_hours": 60,
         "assessment": {
           "flags": [
-            "Verify graduation window"
+            "term not explicit"
           ],
           "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
+            "role match: developer",
+            "skills: python, javascript, sql, html, css, django",
+            "location: New York",
+            "posted within 7 days"
           ],
-          "score": 85
+          "score": 50
         },
         "company": "Terrace",
         "first_seen": "2026-10-05T12:00:00+00:00",
@@ -451,26 +489,30 @@ window.TRACKER_BOOTSTRAP = {
         "source": "fictional_board",
         "status": "reviewing",
         "status_source": "manual",
-        "title": "Software Intern",
+        "title": "Software Developer Intern",
         "url": "https://example.com/jobs/DEMO-114"
       },
       {
+        "age_hours": 10,
         "assessment": {
-          "flags": [
-            "Verify graduation window"
-          ],
+          "flags": [],
           "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
+            "target term: summer 2027",
+            "skills: python, sql, analytics, database",
+            "location: Seattle / Redmond",
+            "company priority: Target",
+            "posted within 24 hours"
           ],
-          "score": 94
+          "score": 60
         },
         "company": "Orbit Labs",
         "first_seen": "2026-10-04T12:00:00+00:00",
         "key": "demo-03",
         "location": "Seattle, WA",
         "priority_program": {
-          "name": "Summer 2027 cohort",
+          "id": "orbit_launch",
+          "matched_alias": "orbit launch",
+          "name": "Orbit Launch (fictional)",
           "official_source": true
         },
         "source": "fictional_board",
@@ -480,13 +522,18 @@ window.TRACKER_BOOTSTRAP = {
         "url": "https://example.com/jobs/DEMO-103"
       },
       {
+        "age_hours": 18,
         "assessment": {
-          "flags": [],
-          "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
+          "flags": [
+            "term not explicit"
           ],
-          "score": 84
+          "reasons": [
+            "role match: research intern",
+            "skills: python, sql, pandas, bert, data science, machine learning",
+            "location: Remote US",
+            "posted within 24 hours"
+          ],
+          "score": 48
         },
         "company": "Fieldwork",
         "first_seen": "2026-10-05T12:00:00+00:00",
@@ -499,13 +546,17 @@ window.TRACKER_BOOTSTRAP = {
         "url": "https://example.com/jobs/DEMO-104"
       },
       {
+        "age_hours": 14,
         "assessment": {
           "flags": [],
           "reasons": [
-            "Role aligns with the demo profile",
-            "Relevant technical skills"
+            "target term: summer 2027",
+            "role match: data science",
+            "skills: python, sql, pandas, health tech, data science, machine learning",
+            "company priority: Standard",
+            "posted within 24 hours"
           ],
-          "score": 89
+          "score": 54
         },
         "company": "Waymark",
         "first_seen": "2026-10-04T12:00:00+00:00",

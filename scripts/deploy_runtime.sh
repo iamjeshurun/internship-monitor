@@ -19,7 +19,7 @@ echo "Syncing code into $RUNTIME"
 rsync -a --delete "$PROJECT_DIR/src/" "$RUNTIME/src/"
 # Shared dashboard assets (same UI as the fictional public demo).
 rsync -a --delete "$PROJECT_DIR/web/" "$RUNTIME/web/"
-for f in mac_agent.py dashboard.py tracker.py mail_sync.py notifier.py run_priority_monitor.sh; do
+for f in mac_agent.py dashboard.py tracker.py mail_sync.py notifier.py run_priority_monitor.sh dispatch_monitor.py run_dispatch.sh; do
   cp "$PROJECT_DIR/mac/$f" "$RUNTIME/mac/$f"
 done
 # Behaviour config. Account routing and private answers are only copied from a
@@ -41,7 +41,7 @@ launchctl kickstart -k "gui/$uid/com.jobmonitor.dashboard" 2>/dev/null \
        launchctl bootstrap "gui/$uid" "$HOME/Library/LaunchAgents/com.jobmonitor.dashboard.plist" 2>/dev/null || true; }
 
 # Optional: force an immediate run of the interval agents instead of waiting.
-for label in poll mail-sync priority; do
+for label in poll mail-sync priority dispatch; do
   launchctl kickstart "gui/$uid/com.jobmonitor.$label" 2>/dev/null || true
 done
 
