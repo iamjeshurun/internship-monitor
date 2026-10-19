@@ -95,6 +95,7 @@ def main():
     except Exception as exc:
         errors.append(f"enrich: {exc}")
 
+    fetched = len(jobs)
     jobs = prepare_jobs(jobs, programs)
     ready = []
     for job in jobs:
@@ -105,10 +106,11 @@ def main():
         # scoring changed), not only brand-new discoveries.
         if record.get("became_ready"):
             ready.append(record)
-    store.add_run({"checked": len(jobs), "new_ready": len(ready), "errors": errors})
+    store.add_run({"fetched": fetched, "checked": len(jobs), "new_ready": len(ready), "errors": errors})
     store.save()
     store.save_queue(DATA_DIR / "review_queue.json")
     delivered = send_digest(ready, errors)
+    print(f"Fetched {fetched} listings; {fetched - len(jobs)} removed as duplicates")
     print(f"Checked {len(jobs)} jobs; {len(ready)} new review items; notification_delivered={delivered}")
     for error in errors:
         print("WARNING", error)
