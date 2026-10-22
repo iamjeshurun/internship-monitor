@@ -5,7 +5,8 @@ import json
 import os
 import re
 import subprocess
-from email.utils import parseaddr
+from datetime import datetime, timezone
+from email.utils import parseaddr, parsedate_to_datetime
 from pathlib import Path
 
 PATTERNS = [
@@ -174,9 +175,6 @@ def parse_mail_date(raw) -> str | None:
     raw = str(raw or "").strip()
     if not raw:
         return None
-    from datetime import datetime, timezone
-    from email.utils import parsedate_to_datetime
-
     for parse in (lambda s: datetime.fromisoformat(s.replace("Z", "+00:00")), parsedate_to_datetime):
         try:
             dt = parse(raw)

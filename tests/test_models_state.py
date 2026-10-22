@@ -70,3 +70,25 @@ def test_just_posted_job_keeps_zero_age():
         [Job("simplify", "1", "Acme", "SWE Intern", "NYC", "https://example.com/1", age_hours=0)]
     )
     assert prepared["age_days"] == 0
+
+
+def test_failed_alert_is_retried_on_the_next_run(tmp_path):
+    ready = {"eligible": True, "score": 70, "notify_threshold": 45}
+    job = Job("test", "1", "A", "SWE Intern", "NYC", "https://example/a").as_dict()
+    store = StateStore(tmp_path / "state.json")
+    record, _ = store.upsert(job, ready)
+    assert store.alert_due(record)
+    store.record_delivery([record], delivered=False)
+    store.save()
+
+    store = StateStore(tmp_path / "state.json")
+    record, _ = store.upsert(job, ready)
+    assert not record.get("became_ready")
+    assert store.alert_due(record), "the undelivered alert must be sent again"
+    assert "alert_pending" not in store.ready_queue()[0]
+    store.record_delivery([record], delivered=True)
+    store.save()
+
+    store = StateStore(tmp_path / "state.json")
+    record, _ = store.upsert(job, ready)
+    assert not store.alert_due(record)

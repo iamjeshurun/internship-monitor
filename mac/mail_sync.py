@@ -6,6 +6,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 from notifier import notify as native_notify
@@ -27,8 +29,6 @@ def configured_accounts() -> list[str]:
     path = ROOT / "config" / "accounts.yaml"
     if not path.exists():
         return []
-    import yaml
-
     data = yaml.safe_load(path.read_text()) or {}
     return list((data.get("application_history") or {}).get("mail_accounts") or [])
 

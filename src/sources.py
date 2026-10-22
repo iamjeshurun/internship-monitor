@@ -130,7 +130,7 @@ def simplify(config: dict) -> list[Job]:
             Job(
                 "simplify",
                 row.url,
-                row.company.lstrip("🔥").strip(),
+                row.company.lstrip("\N{FIRE}").strip(),  # Simplify marks some companies with a fire emoji
                 row.role,
                 row.location,
                 row.url,
@@ -179,7 +179,9 @@ def _fetch_description(url: str) -> str:
             for posting in data.get("jobs", []):
                 if m.group(8) in (posting.get("jobUrl", "") + posting.get("applyUrl", "")):
                     return BeautifulSoup(posting.get("descriptionHtml", ""), "html.parser").get_text(" ")
-    except Exception:
+    except Exception as exc:
+        # Best effort: scoring still runs on the title, so warn rather than fail the run.
+        print(f"WARNING description unavailable for {url}: {exc}")
         return ""
     return ""
 

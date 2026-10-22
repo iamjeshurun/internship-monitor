@@ -50,6 +50,20 @@ class StateStore:
         self.data["jobs"][job["key"]] = current
         return current, is_new
 
+    @staticmethod
+    def alert_due(record: dict) -> bool:
+        return bool(record.get("became_ready") or record.get("alert_pending"))
+
+    @staticmethod
+    def record_delivery(records: list[dict], delivered: bool) -> None:
+        # State is saved after alerting, so an alert that failed is retried next
+        # run instead of being lost once the job is no longer "new".
+        for record in records:
+            if delivered:
+                record.pop("alert_pending", None)
+            else:
+                record["alert_pending"] = True
+
     def add_run(self, record: dict):
         self.data["runs"].append({"at": utc_now(), **record})
         self.data["runs"] = self.data["runs"][-100:]
@@ -67,7 +81,7 @@ class StateStore:
             return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
 
         jobs = [
-            {k: v for k, v in j.items() if k != "became_ready"}
+            {k: v for k, v in j.items() if k not in {"became_ready", "alert_pending"}}
             for j in self.data["jobs"].values()
             if j.get("status") == "ready_for_review" and seen_at(j) >= active_cutoff
         ]

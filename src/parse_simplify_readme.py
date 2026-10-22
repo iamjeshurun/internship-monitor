@@ -34,17 +34,10 @@ class Listing:
     url: str
     age_raw: str
 
-    def dedup_key(self) -> str:
-        # URL is the most stable unique identifier available.
-        return self.url
-
-
-CATEGORY_HEADING_PATTERN = re.compile(r"^##\s+.*?\s+(.+?Internship Roles)\s*$", re.MULTILINE)
-
 
 def parse_readme(markdown_text: str) -> list[Listing]:
     """
-    The README mixes markdown headings ('## 💻 Software Engineering Internship
+    The README mixes markdown headings ('## <emoji> Software Engineering Internship
     Roles') with raw <table> HTML blocks underneath each heading. We split on
     the headings first (regex, since they're plain markdown lines) then parse
     each following HTML table with BeautifulSoup.

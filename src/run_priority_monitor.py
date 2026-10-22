@@ -39,14 +39,15 @@ def main():
     for job in jobs:
         assessment = assess(job, profile, companies.get(job["company"])).as_dict()
         record, new = store.upsert(job, assessment)
-        if record.get("became_ready"):
+        if store.alert_due(record):
             ready.append(record)
+    delivered = send_digest(ready, errors)
+    store.record_delivery(ready, delivered)
     store.add_run(
         {"checked": len(collected), "priority_matches": len(jobs), "new_ready": len(ready), "errors": errors}
     )
     store.save()
     store.save_queue(DATA_DIR / "priority_queue.json")
-    delivered = send_digest(ready, errors)
     print(
         f"Checked {len(collected)} listings; {len(jobs)} priority matches; {len(ready)} new; notification_delivered={delivered}"
     )

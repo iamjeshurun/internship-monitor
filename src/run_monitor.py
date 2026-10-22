@@ -104,12 +104,13 @@ def main():
         # Notify whenever a job *enters* the ready queue this run — including a
         # previously screened-out job that now qualifies (description arrived,
         # scoring changed), not only brand-new discoveries.
-        if record.get("became_ready"):
+        if store.alert_due(record):
             ready.append(record)
+    delivered = send_digest(ready, errors)
+    store.record_delivery(ready, delivered)
     store.add_run({"fetched": fetched, "checked": len(jobs), "new_ready": len(ready), "errors": errors})
     store.save()
     store.save_queue(DATA_DIR / "review_queue.json")
-    delivered = send_digest(ready, errors)
     print(f"Fetched {fetched} listings; {fetched - len(jobs)} removed as duplicates")
     print(f"Checked {len(jobs)} jobs; {len(ready)} new review items; notification_delivered={delivered}")
     for error in errors:
